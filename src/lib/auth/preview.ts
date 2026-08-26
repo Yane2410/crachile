@@ -1,32 +1,26 @@
 /**
- * Shared LIVE-PREVIEW OAuth client (server-only — NEVER import from the client).
+ * Shared LIVE-PREVIEW OAuth configuration (server-only).
  *
- * The sandbox serves each live preview on a dynamic `https://*.grok-sandbox.com`
- * URL, which can't be pre-registered per app. The broker instead exposes ONE
- * shared "preview" client that accepts any
- * `https://*.grok-sandbox.com/api/auth/oauth2/callback/*`
- * (broker: `app-builder-deployer/auth/src/preview-oauth.ts`). Baking it here lets
- * the live preview do REAL sign-in — no demo/mock users — with no platform
- * injection. When deployed the deployer injects a per-app
- * `GROK_AUTH_*` that overrides these (see `server.ts`).
- *
- * These MUST equal the broker's `GROK_PREVIEW_CLIENT_ID` /
- * `GROK_PREVIEW_CLIENT_SECRET` (set in the broker's Vercel env; the broker stores
- * only the secret's `base64url(SHA-256)` hash). This is a dedicated, low-privilege
- * client (preview-only, `*.grok-sandbox.com`) — rotate it by regenerating the
- * broker env var and this constant together.
+ * Secrets are intentionally NOT stored in source control. The preview broker
+ * credentials must be supplied by the local/deployment environment.
  */
-export const PREVIEW_CLIENT_ID = "grok_preview";
-export const PREVIEW_CLIENT_SECRET =
-  "8bcdb7fc5a33874ad933ca568918d5790388a0795e44c4d1dea691f801b17ec5";
+
+/** Shared preview client id. Override with GROK_PREVIEW_CLIENT_ID when needed. */
+export const PREVIEW_CLIENT_ID = process.env.GROK_PREVIEW_CLIENT_ID?.trim() || "grok_preview";
+
+/** Preview client secret must be supplied through the environment. */
+export function getPreviewClientSecret(): string {
+  const secret = process.env.GROK_PREVIEW_CLIENT_SECRET?.trim();
+  if (!secret) {
+    throw new Error(
+      "GROK_PREVIEW_CLIENT_SECRET is required when using the live-preview OAuth client.",
+    );
+  }
+  return secret;
+}
 
 /** The shared auth broker issuer (OIDC discovery lives under it). */
 export const GROK_ISSUER_DEFAULT = "https://auth.grok.me";
 
-/**
- * Host patterns whose callbacks the preview client accepts. Better Auth derives
- * the live preview's real origin from the request host and validates it against
- * this list (wildcard-matched), so the OAuth `redirect_uri` becomes the concrete
- * `https://<preview-host>/api/auth/oauth2/callback/...` the broker allows.
- */
+/** Hosts whose preview callbacks may be trusted by Better Auth. */
 export const PREVIEW_ALLOWED_HOSTS = ["*.grok-sandbox.com"] as const;
