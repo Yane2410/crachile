@@ -1,19 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CheckoutView } from "@/components/checkout-view";
-import { getCatalog } from "@/lib/server/catalog";
+import { createFileRoute } from "@tanstack/react-router";
+import { PedidoPage } from "@/components/pedido-page";
+import { getCatalog } from "@/lib/cra/fns";
 
 export const Route = createFileRoute("/pedido")({
   loader: () => getCatalog(),
-  component: PedidoPage,
+  component: Pedido,
 });
 
-function PedidoPage() {
+function Pedido() {
   const initial = Route.useLoaderData();
-  const { data } = useQuery({
-    queryKey: ["catalog"],
-    queryFn: () => getCatalog(),
-    initialData: initial,
-  });
-  return <CheckoutView catalog={data} />;
+  const { data } = useQuery({ queryKey: ["catalog"], queryFn: () => getCatalog(), initialData: initial });
+  return <PedidoPage catalog={data} />;
 }

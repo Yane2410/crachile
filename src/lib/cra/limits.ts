@@ -1,0 +1,23 @@
+/** Server-enforced bounds. Commercial cart limits stay the same. */
+export const LIMITS = {
+  qtyMin: 1,
+  qtyMax: 20,
+  maxLines: 40,
+  maxNote: 140,
+  maxName: 80,
+  maxPhone: 20,
+  maxAddress: 160,
+  maxObs: 240,
+  empanadaMax: 3,
+  fajitaMax: 8,
+  payloadBytes: 24_000,
+  imageBytes: 400_000,
+  pinMin: 4,
+  pinMax: 32,
+  productName: 80,
+  productDescription: 800,
+  settingsText: 160,
+  orderPerMinute: 20,
+} as const;
+
+export const DEFAULT_PIN = "cra2026";

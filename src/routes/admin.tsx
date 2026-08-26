@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AdminView } from "@/components/admin-view";
-import { getCatalog } from "@/lib/server/catalog";
+import { AdminPage } from "@/components/admin-page";
+import { getCatalog } from "@/lib/cra/fns";
 
 export const Route = createFileRoute("/admin")({
   loader: () => getCatalog(),
-  component: AdminPage,
+  component: Admin,
 });
 
-function AdminPage() {
-  const catalog = Route.useLoaderData();
-  return <AdminView initial={catalog} />;
+function Admin() {
+  const initial = Route.useLoaderData();
+  return <AdminPage initial={initial} />;
 }

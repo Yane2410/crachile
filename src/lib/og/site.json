@@ -1,5 +1,6 @@
 {
   "title": "CRA — Comer Rezar Amar",
-  "card": "custom",
-  "color": "F97316"
+  "description": "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp.",
+  "color": "F97316",
+  "card": "custom"
 }

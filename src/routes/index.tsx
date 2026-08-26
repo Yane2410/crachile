@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { MenuView } from "@/components/menu-view";
-import { getCatalog } from "@/lib/server/catalog";
+import { createFileRoute } from "@tanstack/react-router";
+import { MenuPage } from "@/components/menu-page";
+import { getCatalog } from "@/lib/cra/fns";
 
 export const Route = createFileRoute("/")({
   loader: () => getCatalog(),
@@ -10,10 +10,6 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const initial = Route.useLoaderData();
-  const { data } = useQuery({
-    queryKey: ["catalog"],
-    queryFn: () => getCatalog(),
-    initialData: initial,
-  });
-  return <MenuView catalog={data} />;
+  const { data } = useQuery({ queryKey: ["catalog"], queryFn: () => getCatalog(), initialData: initial });
+  return <MenuPage catalog={data} />;
 }
