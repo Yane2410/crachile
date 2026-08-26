@@ -20,4 +20,13 @@ export const LIMITS = {
   orderPerMinute: 20,
 } as const;
 
-export const DEFAULT_PIN = "cra2026";
+/** Production bootstrap PIN comes from the deployment environment. */
+export function getInitialAdminPin(): string {
+  const pin = process.env.CRA_ADMIN_PIN?.trim();
+  if (!pin) {
+    throw new Error(
+      "CRA_ADMIN_PIN is required to initialize the CRA admin panel. Configure it in the deployment environment.",
+    );
+  }
+  return pin;
+}
