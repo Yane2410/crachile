@@ -16,12 +16,10 @@ const required = [
 ];
 
 const missing = required.filter((key) => !process.env[key]?.trim());
-const authEnabled = process.env.VITE_AUTH_ENABLED !== "false";
-if (authEnabled) {
-  for (const key of ["GROK_AUTH_ISSUER", "GROK_AUTH_CLIENT_ID", "GROK_AUTH_CLIENT_SECRET"]) {
-    if (!process.env[key]?.trim()) missing.push(key);
-  }
-}
+
+// CRA's public ordering flow does not require Grok OAuth. The admin area
+// remains protected by its server-side session/PIN checks, so Grok credentials
+// are intentionally not required for the production build.
 
 if (missing.length) {
   console.error("[preflight] Deployment configuration is incomplete.");
