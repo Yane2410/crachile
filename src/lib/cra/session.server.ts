@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
-import { DEFAULT_PIN, LIMITS } from "./limits";
+import { getInitialAdminPin, LIMITS } from "./limits";
 
 const COOKIE = "cra_admin";
 const MAX_AGE = 60 * 60 * 12;
@@ -31,7 +31,7 @@ export async function verifyPin(pin: string, stored: string) {
 }
 
 export async function defaultPinHash() {
-  return hashPin(DEFAULT_PIN);
+  return hashPin(getInitialAdminPin());
 }
 
 export function newSessionSecret() {
