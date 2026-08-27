@@ -51,7 +51,6 @@ export const createOrder = createServerFn({ method: "POST" })
         return { ok: false as const, error: "El pedido no es válido." };
       }
       const payload = data as Record<string, unknown>;
-      // Client-sent price/total/subtotal/delivery/message are intentionally ignored.
       const catalog = await loadCatalog();
       const order = validateOrder(catalog, payload.items);
       if (!order.ok) return { ok: false as const, error: order.error };
@@ -74,8 +73,7 @@ export const adminMe = createServerFn({ method: "GET" }).handler(async () => {
   const { loadMeta } = await import("./catalog.server");
   const { readSession } = await import("./session.server");
   const meta = await loadMeta();
-  if (!readSession(meta.sessionSecret)) return { ok: false as const, pinHint: !meta.pinChanged };
-  return { ok: true as const, pinHint: !meta.pinChanged };
+  return { ok: readSession(meta.sessionSecret), pinHint: false };
 });
 
 function asData(input: unknown) {
