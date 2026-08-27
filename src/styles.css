@@ -117,6 +117,60 @@
   .min-h-dvh > nav > div { padding-left: 16px; padding-right: 16px; }
 }
 
+/* Fiestas Patrias: seasonal decoration only; the CRA brand and menu data stay untouched. */
+.min-h-dvh > header {
+  position: relative;
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(90deg, #d52b1e 0 33.33%, #ffffff 33.33% 66.66%, #0039a6 66.66% 100%) 1;
+}
+
+.min-h-dvh > header::after {
+  content: "🇨🇱";
+  position: absolute;
+  right: max(16px, calc((100vw - 1200px) / 2 + 12px));
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.15rem;
+  line-height: 1;
+  pointer-events: none;
+  opacity: .9;
+}
+
+.min-h-dvh > main::before {
+  content: "🇨🇱  CRA celebra contigo  ·  ¡Septiembre se disfruta con sabor!  🇨🇱";
+  display: block;
+  width: min(100%, 1200px);
+  margin: 0 auto 10px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d52b1e 0 18%, #fff 18% 82%, #0039a6 82% 100%);
+  box-shadow: var(--shadow-border);
+  color: #2a1810;
+  font-family: var(--font-sans);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+@media (max-width: 639px) {
+  .min-h-dvh > header::after { right: 16px; font-size: 1rem; }
+  .min-h-dvh > main::before {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    font-size: .7rem;
+    line-height: 1.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade,
+  .badge-pop { animation: none; }
+  .press-add { transition: none; }
+}
+
 @keyframes fade-in {
   0% { opacity: 0; }
   100% { opacity: 1; }
