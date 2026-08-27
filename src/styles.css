@@ -39,7 +39,7 @@
   --aspect-photo: 16 / 10;
   --tracking-kicker: .18em;
   --featured-card: min(80vw, 20rem);
-  --header-h: 4.25rem;
+  --header-h: 3.5rem;
   --chips-h: 3.25rem;
 }
 
@@ -66,7 +66,7 @@
 .press-add { transition: transform var(--motion-quick) var(--ease-out); }
 .press-add:active:not(:disabled) { transform: scale(var(--motion-press)); }
 
-/* CRA: responsive menu canvas. The mobile composition stays intact; desktop gets room to breathe. */
+/* CRA: responsive menu canvas. */
 .min-h-dvh > header > div,
 .min-h-dvh > nav > div,
 .min-h-dvh > main,
@@ -80,34 +80,16 @@
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div,
   .min-h-dvh > main,
-  .min-h-dvh > footer {
-    max-width: 1200px;
-  }
-
-  .min-h-dvh > main {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-
+  .min-h-dvh > footer { max-width: 1200px; }
+  .min-h-dvh > main { padding-left: 32px; padding-right: 32px; }
   .min-h-dvh > header > div,
-  .min-h-dvh > nav > div {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-
-  .min-h-dvh > footer {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-
+  .min-h-dvh > nav > div { padding-left: 32px; padding-right: 32px; }
+  .min-h-dvh > footer { padding-left: 32px; padding-right: 32px; }
   .min-h-dvh > main section > div > .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
   }
-
-  .min-h-dvh > main section > div > .grid > button {
-    min-width: 0;
-  }
+  .min-h-dvh > main section > div > .grid > button { min-width: 0; }
 }
 
 @media (min-width: 1280px) {
@@ -126,157 +108,6 @@
   .min-h-dvh > main { padding-left: 16px; padding-right: 16px; }
   .min-h-dvh > header > div { padding-left: 16px; padding-right: 16px; }
   .min-h-dvh > nav > div { padding-left: 16px; padding-right: 16px; }
-}
-
-/* Fiestas Patrias: festive, recognisably Chilean, but still CRA. */
-.min-h-dvh > header {
-  position: relative;
-  overflow: visible;
-  border-top: 0;
-  box-shadow: inset 0 5px 0 #d52b1e;
-}
-
-/* Full Chilean flag, angled like a small waving pennant. */
-.min-h-dvh > header::after {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  right: clamp(18px, calc((100vw - 1200px) / 2 + 18px), 80px);
-  top: 50%;
-  width: 78px;
-  height: 52px;
-  transform: translateY(-50%) rotate(3deg) skewY(-2deg);
-  transform-origin: center;
-  border-radius: 2px 7px 7px 2px;
-  background:
-    linear-gradient(to bottom, #ffffff 0 50%, #d52b1e 50% 100%);
-  box-shadow: 0 4px 10px #2a181033;
-  clip-path: polygon(0 3%, 100% 0, 94% 100%, 4% 96%);
-  pointer-events: none;
-}
-
-.min-h-dvh > header::before {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  right: clamp(70px, calc((100vw - 1200px) / 2 + 70px), 132px);
-  top: calc(50% - 26px);
-  width: 31px;
-  height: 26px;
-  background: #0039a6;
-  clip-path: polygon(0 0, 100% 5%, 96% 100%, 0 94%);
-  pointer-events: none;
-}
-
-/* White star inside the blue canton. */
-.min-h-dvh > nav::before {
-  content: "★";
-  position: absolute;
-  z-index: 4;
-  right: clamp(86px, calc((100vw - 1200px) / 2 + 86px), 148px);
-  top: calc(-1 * var(--header-h) + 13px);
-  width: 31px;
-  text-align: center;
-  color: #fff;
-  font-size: 13px;
-  line-height: 26px;
-  pointer-events: none;
-}
-
-/* Dieciochero bunting running through the menu, without overwhelming product cards. */
-.min-h-dvh > nav {
-  position: sticky;
-}
-
-.min-h-dvh > nav::after {
-  content: "◆  ◆  ◆  ◆  ◆  ◆  ◆  ◆  ◆  ◆  ◆  ◆";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -13px;
-  z-index: 1;
-  height: 18px;
-  overflow: hidden;
-  color: #d52b1e;
-  font-size: 10px;
-  letter-spacing: 15px;
-  line-height: 16px;
-  text-align: center;
-  white-space: nowrap;
-  pointer-events: none;
-  text-shadow: 9px 0 #0039a6, 18px 0 #d52b1e;
-}
-
-.min-h-dvh > main::before {
-  content: "🇨🇱  CRA celebra contigo  ·  ¡Septiembre se disfruta con sabor!  🇨🇱";
-  display: block;
-  width: 100%;
-  margin: 18px auto 14px;
-  padding: 11px 16px;
-  border: 1px solid #d52b1e33;
-  border-radius: 14px;
-  background: linear-gradient(90deg, #d52b1e 0 9%, #fff 9% 91%, #0039a6 91% 100%);
-  box-shadow: var(--shadow-border);
-  color: #2a1810;
-  font-family: var(--font-sans);
-  font-size: .82rem;
-  font-weight: 800;
-  letter-spacing: .025em;
-  text-align: center;
-  text-wrap: balance;
-}
-
-/* Little festive separators before each category, so the celebration continues down the page. */
-.min-h-dvh > main section {
-  position: relative;
-}
-
-.min-h-dvh > main section > div:first-child::after {
-  content: "✦  🇨🇱  ✦";
-  display: block;
-  margin-top: 7px;
-  color: #d52b1e;
-  font-size: .72rem;
-  font-weight: 800;
-  letter-spacing: .16em;
-}
-
-@media (min-width: 640px) {
-  .min-h-dvh > main::before {
-    margin-top: 22px;
-    padding: 12px 20px;
-    border-radius: 999px;
-    font-size: .88rem;
-  }
-}
-
-@media (max-width: 639px) {
-  .min-h-dvh > header::after {
-    right: 16px;
-    width: 58px;
-    height: 39px;
-  }
-  .min-h-dvh > header::before {
-    right: 59px;
-    top: calc(50% - 20px);
-    width: 23px;
-    height: 20px;
-  }
-  .min-h-dvh > nav::before {
-    right: 70px;
-    top: calc(-1 * var(--header-h) + 14px);
-    width: 23px;
-    font-size: 10px;
-    line-height: 20px;
-  }
-  .min-h-dvh > main::before {
-    margin-top: 16px;
-    margin-bottom: 12px;
-    padding: 9px 11px;
-    border-radius: 13px;
-    font-size: .7rem;
-    line-height: 1.35;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
