@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { MenuPage } from "@/components/menu-page";
-import { PublicCombos } from "@/components/public-combos";
 import { getCatalog } from "@/lib/cra/fns";
 
 export const Route = createFileRoute("/")({
@@ -12,10 +11,5 @@ export const Route = createFileRoute("/")({
 function Home() {
   const initial = Route.useLoaderData();
   const { data } = useQuery({ queryKey: ["catalog"], queryFn: () => getCatalog(), initialData: initial });
-  return (
-    <>
-      <PublicCombos />
-      <MenuPage catalog={data} />
-    </>
-  );
+  return <MenuPage catalog={data} />;
 }
