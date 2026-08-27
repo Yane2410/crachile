@@ -2,10 +2,7 @@
 -- photo, price, description and availability controls in Admin.
 insert into cra_categories (id, name, tagline, sort_order, available)
 values ('combos', 'Combos', 'Más por menos, sin complicar tu pedido', 0, true)
-on conflict (id) do update
-set name = excluded.name,
-    tagline = excluded.tagline,
-    sort_order = excluded.sort_order;
+on conflict (id) do nothing;
 
 insert into cra_products (
   category_id, subcategory, name, description, price, image_url,
