@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: Omit<KitchenSettings, "pinHint"> = {
 };
 
 export const SEED_CATEGORIES: Category[] = [
+  { id: "combos", name: "Combos", tagline: "Más por menos, sin complicar tu pedido", sortOrder: 0, available: true },
   { id: "empanadas", name: "Empanadas", tagline: "Masa de maíz frita, rellenos al estilo venezolano", sortOrder: 1, available: true },
   { id: "fajitas", name: "Fajitas", tagline: "Tortilla rellena con salsa de ajo CRA", sortOrder: 2, available: true },
   { id: "papas", name: "Papas fritas", tagline: "Crocantes, simples o con proteína", sortOrder: 3, available: true },
@@ -70,6 +71,11 @@ export const SEED_PRODUCTS: SeedProduct[] = [
   { id: 21, categoryId: "papas", subcategory: null, name: "Papas Mechada", description: "Papas grandes con 80 g de carne mechada.", price: 6500, imageUrl: "/menu/papas-mechada.jpg", available: true, isCustom: false, customKind: null, sortOrder: 30 },
   { id: 22, categoryId: "papas", subcategory: null, name: "Papas Pollo", description: "Papas grandes con 80 g de pollo desmechado.", price: 6000, imageUrl: "/menu/papas-pollo.jpg", available: true, isCustom: false, customKind: null, sortOrder: 40 },
   { id: 23, categoryId: "bebidas", subcategory: null, name: "Bebida en lata", description: "Lata fría. Marca según disponibilidad del día.", price: 1500, imageUrl: "/menu/bebida.jpg", available: true, isCustom: false, customKind: null, sortOrder: 10 },
+  { id: 24, categoryId: "combos", subcategory: "CRA", name: "Combo Individual", description: "2 empanadas clásicas a elección + 1 bebida en lata.", price: 6500, imageUrl: "", available: true, isCustom: false, customKind: null, sortOrder: 10 },
+  { id: 25, categoryId: "combos", subcategory: "CRA", name: "Combo Doble", description: "4 empanadas clásicas a elección + 2 bebidas en lata.", price: 11500, imageUrl: "", available: true, isCustom: false, customKind: null, sortOrder: 20 },
+  { id: 26, categoryId: "combos", subcategory: "CRA", name: "Combo Fajita", description: "1 Fajita Comer + 1 bebida en lata.", price: 4900, imageUrl: "", available: true, isCustom: false, customKind: null, sortOrder: 30 },
+  { id: 27, categoryId: "combos", subcategory: "CRA", name: "Combo CRA", description: "2 empanadas clásicas + 1 Fajita Comer + 1 bebida en lata.", price: 9900, imageUrl: "", available: true, isCustom: false, customKind: null, sortOrder: 40 },
+  { id: 28, categoryId: "combos", subcategory: "CRA", name: "Combo Fajita + Papas", description: "1 Fajita Comer + papas fritas pequeñas + 1 bebida en lata.", price: 6900, imageUrl: "", available: false, isCustom: false, customKind: null, sortOrder: 50 },
 ];
 
 export function seedCatalog(pinHint = true): Catalog {
