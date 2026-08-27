@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Gift, Tag, UtensilsCrossed } from "lucide-react";
 import { getCombos } from "@/lib/cra/fns";
@@ -19,9 +21,25 @@ function ComboPhoto({ combo }: { combo: Combo }) {
 
 export function PublicCombos() {
   const { data: combos = [] } = useQuery({ queryKey: ["public-combos"], queryFn: () => getCombos() });
-  if (!combos.length) return null;
+  const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
 
-  return (
+  useEffect(() => {
+    if (!combos.length) return;
+    const hero = document.querySelector<HTMLElement>("section.relative.mx-auto.max-w-menu");
+    if (!hero?.parentElement) return;
+    const node = document.createElement("div");
+    node.setAttribute("data-cra-public-combos", "true");
+    hero.insertAdjacentElement("afterend", node);
+    setMountNode(node);
+    return () => {
+      setMountNode(null);
+      node.remove();
+    };
+  }, [combos.length]);
+
+  if (!combos.length || !mountNode) return null;
+
+  return createPortal(
     <section className="border-b border-border/80 bg-surface-2 px-4 py-7">
       <div className="mx-auto max-w-menu">
         <div className="mb-4 flex items-end justify-between gap-3">
@@ -55,6 +73,7 @@ export function PublicCombos() {
           ))}
         </div>
       </div>
-    </section>
+    </section>,
+    mountNode,
   );
 }
