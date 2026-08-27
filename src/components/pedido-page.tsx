@@ -126,8 +126,15 @@ export function PedidoPage({ catalog }: { catalog: Catalog }) {
         Completa tus datos. El mensaje llega completo a WhatsApp: platos, extras, dirección, pago y total.
       </p>
       <ul className="mt-6 space-y-2">
-        {items.map((item) => {
+        {items.map((item, index) => {
           const unit = lineUnitPrice(item, catalog);
+          const validatedLine = priced.ok ? priced.lines[index] : null;
+          const comboOriginalUnit = validatedLine?.comboItems?.reduce((sum, comboItem) => sum + comboItem.unitPrice * comboItem.qty, 0) ?? null;
+          const originalUnit = comboOriginalUnit != null ? comboOriginalUnit : unit;
+          const finalTotal = unit * item.qty;
+          const originalTotal = originalUnit * item.qty;
+          const savings = Math.max(0, originalTotal - finalTotal);
+          const isDiscountedCombo = Boolean(item.comboId && originalTotal > finalTotal);
           return (
             <li key={item.lineId} className="flex items-start gap-3 rounded-[var(--radius-md)] bg-surface p-2.5 shadow-[var(--shadow-border)]">
               {item.imageUrl ? (
@@ -138,11 +145,24 @@ export function PedidoPage({ catalog }: { catalog: Catalog }) {
                   {item.qty} {item.categoryLabel ? `${item.categoryLabel} · ` : ""}
                   {item.name}
                 </span>
+                {item.comboSelections?.length ? (
+                  <span className="mt-1 block text-xs text-muted">
+                    {item.comboSelections.map((selection) => catalog.products.find((product) => product.id === selection.productId)?.name ?? "Producto").join(" · ")}
+                  </span>
+                ) : null}
                 {item.extras.length ? <span className="block text-xs text-muted">{item.extras.join(" · ")}</span> : null}
                 {item.note ? <span className="block text-xs italic text-muted">{item.note}</span> : null}
+                {isDiscountedCombo ? (
+                  <span className="mt-1.5 block text-xs font-medium text-heart">
+                    Ahorras {formatClp(savings)}
+                  </span>
+                ) : null}
               </span>
               <span className="shrink-0 text-right">
-                <span className="block text-sm font-semibold tabular-nums">{formatClp(unit * item.qty)}</span>
+                {isDiscountedCombo ? (
+                  <span className="block text-xs text-muted tabular-nums line-through">{formatClp(originalTotal)}</span>
+                ) : null}
+                <span className="block text-sm font-semibold tabular-nums">{formatClp(finalTotal)}</span>
                 <span className="block text-xs text-muted tabular-nums">
                   {item.qty} × {formatClp(unit)}
                 </span>
