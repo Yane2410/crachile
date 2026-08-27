@@ -3,289 +3,57 @@ import { LIMITS } from "./limits";
 import { defaultPinHash, newSessionSecret } from "./session.server";
 import { DEFAULT_SETTINGS, SEED_CATEGORIES, SEED_INGREDIENTS, SEED_PRODUCTS } from "./seed";
 import { sanitizeLine, sanitizeMultiline } from "./sanitize";
+import { loadCombos } from "./combos.server";
 import type { Catalog, Category, Ingredient, KitchenSettings, Product } from "./types";
 
-type MetaRow = {
-  pin_hash: string;
-  pin_changed: boolean;
-  session_secret: string;
-  settings: KitchenSettings | string;
-};
+type MetaRow = { pin_hash: string; pin_changed: boolean; session_secret: string; settings: KitchenSettings | string };
+type CategoryRow = { id: string; name: string; tagline: string; sort_order: number; available: boolean };
+type ProductRow = { id: number; category_id: string; subcategory: string | null; name: string; description: string; price: number; image_url: string; available: boolean; is_custom: boolean; custom_kind: string | null; sort_order: number };
+type IngredientRow = { id: string; name: string; kind: string; premium: boolean; empanada_ok: boolean; fajita_ok: boolean; fajita_price: number; available: boolean; sort_order: number };
 
-type CategoryRow = {
-  id: string;
-  name: string;
-  tagline: string;
-  sort_order: number;
-  available: boolean;
-};
-
-type ProductRow = {
-  id: number;
-  category_id: string;
-  subcategory: string | null;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  available: boolean;
-  is_custom: boolean;
-  custom_kind: string | null;
-  sort_order: number;
-};
-
-type IngredientRow = {
-  id: string;
-  name: string;
-  kind: string;
-  premium: boolean;
-  empanada_ok: boolean;
-  fajita_ok: boolean;
-  fajita_price: number;
-  available: boolean;
-  sort_order: number;
-};
-
-function asBool(value: unknown) {
-  return value === true || value === "t" || value === "true";
-}
-
-function asInt(value: unknown, fallback = 0) {
-  const n = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(n) ? Math.trunc(n) : fallback;
-}
-
-function parseSettings(raw: KitchenSettings | string, pinHint: boolean): KitchenSettings {
-  const data = typeof raw === "string" ? (JSON.parse(raw) as KitchenSettings) : raw;
-  return { ...DEFAULT_SETTINGS, ...data, pinHint };
-}
+function asBool(value: unknown) { return value === true || value === "t" || value === "true"; }
+function asInt(value: unknown, fallback = 0) { const n = typeof value === "number" ? value : Number(value); return Number.isFinite(n) ? Math.trunc(n) : fallback; }
+function parseSettings(raw: KitchenSettings | string, pinHint: boolean): KitchenSettings { const data = typeof raw === "string" ? (JSON.parse(raw) as KitchenSettings) : raw; return { ...DEFAULT_SETTINGS, ...data, pinHint }; }
 
 export async function ensureSeeded() {
-  const sql = await getSql();
-  const existing = await sql<{ n: number }>`select count(*)::int as n from cra_meta`;
-  if ((existing[0]?.n ?? 0) > 0) return;
-  const pinHash = await defaultPinHash();
-  const secret = newSessionSecret();
-  await sql`
-    insert into cra_meta (id, pin_hash, pin_changed, session_secret, settings)
-    values (1, ${pinHash}, false, ${secret}, ${JSON.stringify(DEFAULT_SETTINGS)}::jsonb)
-  `;
-  for (const cat of SEED_CATEGORIES) {
-    await sql`
-      insert into cra_categories (id, name, tagline, sort_order, available)
-      values (${cat.id}, ${cat.name}, ${cat.tagline}, ${cat.sortOrder}, ${cat.available})
-    `;
-  }
-  for (const product of SEED_PRODUCTS) {
-    await sql`
-      insert into cra_products (
-        id, category_id, subcategory, name, description, price, image_url,
-        available, is_custom, custom_kind, sort_order
-      ) values (
-        ${product.id}, ${product.categoryId}, ${product.subcategory}, ${product.name},
-        ${product.description}, ${product.price}, ${product.imageUrl}, ${product.available},
-        ${product.isCustom}, ${product.customKind}, ${product.sortOrder}
-      )
-    `;
-  }
-  try {
-    await sql`select setval(pg_get_serial_sequence('cra_products','id'), (select max(id) from cra_products))`;
-  } catch {
-    /* seed uses explicit ids; sequence bump is best-effort */
-  }
-  for (const ing of SEED_INGREDIENTS) {
-    await sql`
-      insert into cra_ingredients (
-        id, name, kind, premium, empanada_ok, fajita_ok, fajita_price, available, sort_order
-      ) values (
-        ${ing.id}, ${ing.name}, ${ing.kind}, ${ing.premium}, ${ing.empanadaOk},
-        ${ing.fajitaOk}, ${ing.fajitaPrice}, ${ing.available}, ${ing.sortOrder}
-      )
-    `;
-  }
+  const sql = await getSql(); const existing = await sql<{ n: number }>`select count(*)::int as n from cra_meta`; if ((existing[0]?.n ?? 0) > 0) return;
+  const pinHash = await defaultPinHash(); const secret = newSessionSecret();
+  await sql`insert into cra_meta (id, pin_hash, pin_changed, session_secret, settings) values (1, ${pinHash}, false, ${secret}, ${JSON.stringify(DEFAULT_SETTINGS)}::jsonb)`;
+  for (const cat of SEED_CATEGORIES) await sql`insert into cra_categories (id, name, tagline, sort_order, available) values (${cat.id}, ${cat.name}, ${cat.tagline}, ${cat.sortOrder}, ${cat.available})`;
+  for (const product of SEED_PRODUCTS) await sql`insert into cra_products (id, category_id, subcategory, name, description, price, image_url, available, is_custom, custom_kind, sort_order) values (${product.id}, ${product.categoryId}, ${product.subcategory}, ${product.name}, ${product.description}, ${product.price}, ${product.imageUrl}, ${product.available}, ${product.isCustom}, ${product.customKind}, ${product.sortOrder})`;
+  try { await sql`select setval(pg_get_serial_sequence('cra_products','id'), (select max(id) from cra_products))`; } catch { /* best effort */ }
+  for (const ing of SEED_INGREDIENTS) await sql`insert into cra_ingredients (id, name, kind, premium, empanada_ok, fajita_ok, fajita_price, available, sort_order) values (${ing.id}, ${ing.name}, ${ing.kind}, ${ing.premium}, ${ing.empanadaOk}, ${ing.fajitaOk}, ${ing.fajitaPrice}, ${ing.available}, ${ing.sortOrder})`;
 }
 
 export async function loadMeta() {
-  await ensureSeeded();
-  const sql = await getSql();
-  const rows = await sql<MetaRow>`select pin_hash, pin_changed, session_secret, settings from cra_meta where id = 1`;
-  const row = rows[0];
-  if (!row) throw new Error("missing meta");
-  return {
-    pinHash: row.pin_hash,
-    pinChanged: asBool(row.pin_changed),
-    sessionSecret: row.session_secret,
-    settings: parseSettings(row.settings, !asBool(row.pin_changed)),
-  };
+  await ensureSeeded(); const sql = await getSql(); const rows = await sql<MetaRow>`select pin_hash, pin_changed, session_secret, settings from cra_meta where id = 1`; const row = rows[0]; if (!row) throw new Error("missing meta");
+  return { pinHash: row.pin_hash, pinChanged: asBool(row.pin_changed), sessionSecret: row.session_secret, settings: parseSettings(row.settings, !asBool(row.pin_changed)) };
 }
 
-function mapProduct(row: ProductRow): Product {
-  return {
-    id: asInt(row.id),
-    categoryId: row.category_id,
-    subcategory: row.subcategory,
-    name: row.name,
-    description: row.description,
-    price: asInt(row.price),
-    imageUrl: row.image_url,
-    available: asBool(row.available),
-    isCustom: asBool(row.is_custom),
-    customKind: row.custom_kind === "empanada" || row.custom_kind === "fajita" ? row.custom_kind : null,
-    sortOrder: asInt(row.sort_order),
-  };
-}
-
-function mapCategory(row: CategoryRow): Category {
-  return {
-    id: row.id,
-    name: row.name,
-    tagline: row.tagline,
-    sortOrder: asInt(row.sort_order),
-    available: asBool(row.available),
-  };
-}
-
-function mapIngredient(row: IngredientRow): Ingredient {
-  return {
-    id: row.id,
-    name: row.name,
-    kind: row.kind === "protein" || row.kind === "cheese" ? row.kind : "veg",
-    premium: asBool(row.premium),
-    empanadaOk: asBool(row.empanada_ok),
-    fajitaOk: asBool(row.fajita_ok),
-    fajitaPrice: asInt(row.fajita_price),
-    available: asBool(row.available),
-    sortOrder: asInt(row.sort_order),
-  };
-}
+function mapProduct(row: ProductRow): Product { return { id: asInt(row.id), categoryId: row.category_id, subcategory: row.subcategory, name: row.name, description: row.description, price: asInt(row.price), imageUrl: row.image_url, available: asBool(row.available), isCustom: asBool(row.is_custom), customKind: row.custom_kind === "empanada" || row.custom_kind === "fajita" ? row.custom_kind : null, sortOrder: asInt(row.sort_order) }; }
+function mapCategory(row: CategoryRow): Category { return { id: row.id, name: row.name, tagline: row.tagline, sortOrder: asInt(row.sort_order), available: asBool(row.available) }; }
+function mapIngredient(row: IngredientRow): Ingredient { return { id: row.id, name: row.name, kind: row.kind === "protein" || row.kind === "cheese" ? row.kind : "veg", premium: asBool(row.premium), empanadaOk: asBool(row.empanada_ok), fajitaOk: asBool(row.fajita_ok), fajitaPrice: asInt(row.fajita_price), available: asBool(row.available), sortOrder: asInt(row.sort_order) }; }
 
 export async function loadCatalog(): Promise<Catalog> {
-  const meta = await loadMeta();
-  const sql = await getSql();
+  const meta = await loadMeta(); const sql = await getSql();
   const categories = await sql<CategoryRow>`select * from cra_categories order by sort_order, id`;
   const products = await sql<ProductRow>`select * from cra_products order by category_id, sort_order, id`;
   const ingredients = await sql<IngredientRow>`select * from cra_ingredients order by sort_order, id`;
-  return {
-    categories: categories.map(mapCategory),
-    products: products.map(mapProduct),
-    ingredients: ingredients.map(mapIngredient),
-    settings: meta.settings,
-  };
+  const combos = await loadCombos();
+  return { categories: categories.map(mapCategory), products: products.map(mapProduct), ingredients: ingredients.map(mapIngredient), combos, settings: meta.settings };
 }
 
 export async function saveSettings(patch: Partial<KitchenSettings>) {
-  const meta = await loadMeta();
-  const next: Omit<KitchenSettings, "pinHint"> = {
+  const meta = await loadMeta(); const next: Omit<KitchenSettings, "pinHint"> = {
     restaurantName: sanitizeLine(patch.restaurantName ?? meta.settings.restaurantName, LIMITS.settingsText) || DEFAULT_SETTINGS.restaurantName,
-    tagline: sanitizeLine(patch.tagline ?? meta.settings.tagline, LIMITS.settingsText),
-    city: sanitizeLine(patch.city ?? meta.settings.city, LIMITS.settingsText),
-    coverage: sanitizeLine(patch.coverage ?? meta.settings.coverage, LIMITS.settingsText),
-    deliveryNote: sanitizeLine(patch.deliveryNote ?? meta.settings.deliveryNote, LIMITS.settingsText),
-    hours: sanitizeLine(patch.hours ?? meta.settings.hours, LIMITS.settingsText),
-    prepMin: clampMoney(patch.prepMin ?? meta.settings.prepMin, 1, 180, 25),
-    prepMax: clampMoney(patch.prepMax ?? meta.settings.prepMax, 1, 180, 35),
-    whatsapp: sanitizeLine(patch.whatsapp ?? meta.settings.whatsapp, 20).replace(/\D/g, ""),
-    transferBank: sanitizeLine(patch.transferBank ?? meta.settings.transferBank, LIMITS.settingsText),
-    transferName: sanitizeLine(patch.transferName ?? meta.settings.transferName, LIMITS.settingsText),
-    transferRut: sanitizeLine(patch.transferRut ?? meta.settings.transferRut, 20),
-    transferAccount: sanitizeLine(patch.transferAccount ?? meta.settings.transferAccount, LIMITS.settingsText),
-    empanada1: clampMoney(patch.empanada1 ?? meta.settings.empanada1, 0, 100_000, 2800),
-    empanada2: clampMoney(patch.empanada2 ?? meta.settings.empanada2, 0, 100_000, 3200),
-    empanada3: clampMoney(patch.empanada3 ?? meta.settings.empanada3, 0, 100_000, 3500),
-    empanadaPremium: clampMoney(patch.empanadaPremium ?? meta.settings.empanadaPremium, 0, 20_000, 300),
-    fajitaBase: clampMoney(patch.fajitaBase ?? meta.settings.fajitaBase, 0, 100_000, 2200),
+    tagline: sanitizeLine(patch.tagline ?? meta.settings.tagline, LIMITS.settingsText), city: sanitizeLine(patch.city ?? meta.settings.city, LIMITS.settingsText), coverage: sanitizeLine(patch.coverage ?? meta.settings.coverage, LIMITS.settingsText), deliveryNote: sanitizeMultiline(patch.deliveryNote ?? meta.settings.deliveryNote, LIMITS.settingsText), hours: sanitizeLine(patch.hours ?? meta.settings.hours, LIMITS.settingsText), prepMin: Math.max(0, Math.trunc(Number(patch.prepMin ?? meta.settings.prepMin))), prepMax: Math.max(0, Math.trunc(Number(patch.prepMax ?? meta.settings.prepMax))), whatsapp: sanitizeLine(patch.whatsapp ?? meta.settings.whatsapp, LIMITS.maxPhone), transferBank: sanitizeLine(patch.transferBank ?? meta.settings.transferBank, LIMITS.settingsText), transferName: sanitizeLine(patch.transferName ?? meta.settings.transferName, LIMITS.settingsText), transferRut: sanitizeLine(patch.transferRut ?? meta.settings.transferRut, LIMITS.settingsText), transferAccount: sanitizeLine(patch.transferAccount ?? meta.settings.transferAccount, LIMITS.settingsText), empanada1: Math.max(0, Math.trunc(Number(patch.empanada1 ?? meta.settings.empanada1))), empanada2: Math.max(0, Math.trunc(Number(patch.empanada2 ?? meta.settings.empanada2))), empanada3: Math.max(0, Math.trunc(Number(patch.empanada3 ?? meta.settings.empanada3))), empanadaPremium: Math.max(0, Math.trunc(Number(patch.empanadaPremium ?? meta.settings.empanadaPremium))), fajitaBase: Math.max(0, Math.trunc(Number(patch.fajitaBase ?? meta.settings.fajitaBase))), pinHint: false,
   };
-  const sql = await getSql();
-  await sql`update cra_meta set settings = ${JSON.stringify(next)}::jsonb where id = 1`;
-  return loadCatalog();
+  const sql = await getSql(); await sql`update cra_meta set settings=${JSON.stringify(next)}::jsonb where id=1`; return publicCatalog(await loadCatalog());
 }
 
-export async function patchProduct(id: number, patch: Partial<Product>) {
-  const sql = await getSql();
-  const rows = await sql<ProductRow>`select * from cra_products where id = ${id}`;
-  const current = rows[0];
-  if (!current) throw new Error("Ese plato no existe.");
-  const name = patch.name != null ? sanitizeLine(patch.name, LIMITS.productName) : current.name;
-  const description = patch.description != null ? sanitizeMultiline(patch.description, LIMITS.productDescription) : current.description;
-  const price = patch.price != null ? clampMoney(patch.price, 0, 200_000, current.price) : asInt(current.price);
-  const available = patch.available != null ? Boolean(patch.available) : asBool(current.available);
-  let imageUrl = current.image_url;
-  if (patch.imageUrl != null) {
-    imageUrl = sanitizeImage(patch.imageUrl);
-  }
-  await sql`
-    update cra_products
-    set name = ${name || current.name},
-        description = ${description},
-        price = ${price},
-        available = ${available},
-        image_url = ${imageUrl}
-    where id = ${id}
-  `;
-  return loadCatalog();
-}
-
-export async function createProduct(input: {
-  categoryId: string;
-  name: string;
-  price: number;
-  description?: string;
-  imageUrl?: string;
-}) {
-  const catalog = await loadCatalog();
-  const category = catalog.categories.find((c) => c.id === input.categoryId);
-  if (!category) throw new Error("Categoría inválida.");
-  const name = sanitizeLine(input.name, LIMITS.productName);
-  if (name.length < 2) throw new Error("El nombre no es válido.");
-  const sql = await getSql();
-  await sql`
-    insert into cra_products (
-      category_id, subcategory, name, description, price, image_url,
-      available, is_custom, custom_kind, sort_order
-    ) values (
-      ${category.id}, null, ${name},
-      ${sanitizeMultiline(input.description ?? "", LIMITS.productDescription)},
-      ${clampMoney(input.price, 0, 200_000, 0)},
-      ${input.imageUrl ? sanitizeImage(input.imageUrl) : ""},
-      true, false, null, 500
-    )
-  `;
-  return loadCatalog();
-}
-
-export async function deleteProduct(id: number) {
-  const sql = await getSql();
-  await sql`delete from cra_products where id = ${id} and is_custom = false`;
-  return loadCatalog();
-}
-
-export async function patchIngredient(id: string, patch: Partial<Pick<Ingredient, "fajitaPrice" | "available">>) {
-  const sql = await getSql();
-  const rows = await sql<IngredientRow>`select * from cra_ingredients where id = ${id}`;
-  if (!rows[0]) throw new Error("Ese ingrediente no existe.");
-  const fajitaPrice = patch.fajitaPrice != null ? clampMoney(patch.fajitaPrice, 0, 50_000, asInt(rows[0].fajita_price)) : asInt(rows[0].fajita_price);
-  const available = patch.available != null ? Boolean(patch.available) : asBool(rows[0].available);
-  await sql`update cra_ingredients set fajita_price = ${fajitaPrice}, available = ${available} where id = ${id}`;
-  return loadCatalog();
-}
-
-export async function updatePinHash(hash: string) {
-  const sql = await getSql();
-  await sql`update cra_meta set pin_hash = ${hash}, pin_changed = true where id = 1`;
-}
-
-function clampMoney(value: unknown, min: number, max: number, fallback: number) {
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  const i = Math.round(n);
-  if (i < min || i > max) return fallback;
-  return i;
-}
-
-function sanitizeImage(url: string) {
-  const value = url.trim();
-  if (value.startsWith("/menu/") && value.length < 120 && !value.includes("..")) return value;
-  if (value.startsWith("data:image/jpeg;base64,") && value.length <= LIMITS.imageBytes) return value;
-  if (value.startsWith("data:image/png;base64,") && value.length <= LIMITS.imageBytes) return value;
-  throw new Error("La imagen no es válida.");
-}
+export async function patchProduct(id: number, patch: Partial<Product>) { const sql = await getSql(); await sql`update cra_products set name=coalesce(${patch.name ?? null},name), description=coalesce(${patch.description ?? null},description), price=coalesce(${patch.price ?? null},price), available=coalesce(${patch.available ?? null},available), image_url=coalesce(${patch.imageUrl ?? null},image_url), updated_at=now() where id=${id}`; return loadCatalog(); }
+export async function createProduct(input: { categoryId: string; name: string; price: number; description: string; imageUrl?: string }) { const sql = await getSql(); await sql`insert into cra_products (category_id,name,price,description,image_url,available,is_custom,sort_order) values (${input.categoryId},${input.name},${input.price},${input.description},${input.imageUrl ?? ""},true,false,500)`; return loadCatalog(); }
+export async function deleteProduct(id: number) { const sql = await getSql(); await sql`delete from cra_products where id=${id}`; return loadCatalog(); }
+export async function patchIngredient(id: string, patch: Partial<Ingredient>) { const sql = await getSql(); await sql`update cra_ingredients set fajita_price=coalesce(${patch.fajitaPrice ?? null},fajita_price), available=coalesce(${patch.available ?? null},available) where id=${id}`; return loadCatalog(); }
+export async function updatePinHash(pinHash: string) { const sql = await getSql(); await sql`update cra_meta set pin_hash=${pinHash}, pin_changed=true where id=1`; }
+function publicCatalog(catalog: Catalog): Catalog { return { ...catalog, settings: { ...catalog.settings, pinHint: false } }; }
