@@ -21,7 +21,7 @@ export function PublicCombos() {
   const carousel = combos.length > 1;
   return (
     <section className="border-b border-border/80 bg-surface-2 px-4 py-6">
-      <div className="mx-auto max-w-menu">
+      <div className="mx-auto max-w-5xl">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div><p className="text-xs font-semibold uppercase tracking-kicker text-heart">Especiales CRA</p><h2 className="mt-1 font-display text-2xl font-semibold text-title">Combos</h2><p className="mt-1 text-sm text-muted">Más por menos, sin complicar tu pedido</p></div>
           <Gift className="size-6 shrink-0 text-heart" />
