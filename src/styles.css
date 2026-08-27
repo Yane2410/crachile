@@ -47,6 +47,10 @@
   button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
   img:not(.no-outline) { outline: 1px solid var(--color-photo-ink); outline-offset: -1px; }
   html, body { background: var(--color-bg); color: var(--color-fg); }
+  html { overflow-x: hidden; }
+  body { min-width: 320px; overflow-x: hidden; }
+  *, *::before, *::after { box-sizing: border-box; }
+  img, svg, video, canvas { max-width: 100%; }
 }
 
 .max-w-menu { max-width: var(--container-menu); }
@@ -61,6 +65,57 @@
 .badge-pop { animation: badge-pop var(--motion-fast) var(--ease-pop); }
 .press-add { transition: transform var(--motion-quick) var(--ease-out); }
 .press-add:active:not(:disabled) { transform: scale(var(--motion-press)); }
+
+/* CRA menu: keep the desktop canvas generous without changing the mobile composition. */
+@media (min-width: 1024px) {
+  .min-h-dvh > header > div,
+  .min-h-dvh > nav > div,
+  .min-h-dvh > main,
+  .min-h-dvh > footer {
+    max-width: 1200px;
+  }
+
+  .min-h-dvh > main {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .min-h-dvh > header > div,
+  .min-h-dvh > nav > div {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .min-h-dvh > footer {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .min-h-dvh > main section > div > .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .min-h-dvh > main section > div > .grid > button {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .min-h-dvh > main section > div > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .min-h-dvh > main { padding-left: 20px; padding-right: 20px; }
+}
+
+@media (max-width: 639px) {
+  .min-h-dvh > main { padding-left: 16px; padding-right: 16px; }
+  .min-h-dvh > header > div { padding-left: 16px; padding-right: 16px; }
+  .min-h-dvh > nav > div { padding-left: 16px; padding-right: 16px; }
+}
 
 @keyframes fade-in {
   0% { opacity: 0; }
