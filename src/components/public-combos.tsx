@@ -42,7 +42,10 @@ function ComboBuilder({ combo, products, onClose }: { combo: Combo; products: Pr
   const choose = (key: string, productId: number) => setSelected(current => ({ ...current, [key]: productId }));
   const submit = () => {
     if (!complete || !selectedProducts.length) return;
-    addItem({ lineId: undefined, productId: selectedProducts[0], extraIds: [], extras: [], note: "", qty: 1, name: combo.name, categoryLabel: "Combo", imageUrl: combo.imageUrl, comboId: combo.id, comboName: combo.name, comboSelections: selectedProducts.map(productId => ({ productId })), comboDiscount: pricing.discount });
+    const cartPriceNote = pricing.discount > 0
+      ? `Precio normal: ${formatClp(pricing.subtotal)} · Ahorras: ${formatClp(pricing.discount)} · Precio combo: ${formatClp(pricing.total)}`
+      : `Precio combo: ${formatClp(pricing.total)}`;
+    addItem({ lineId: undefined, productId: selectedProducts[0], extraIds: [], extras: [], note: cartPriceNote, qty: 1, name: combo.name, categoryLabel: "Combo", imageUrl: combo.imageUrl, comboId: combo.id, comboName: combo.name, comboSelections: selectedProducts.map(productId => ({ productId })), comboDiscount: pricing.discount });
     onClose();
   };
 
