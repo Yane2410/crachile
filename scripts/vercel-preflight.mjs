@@ -8,18 +8,8 @@ if (!isVercel && !isProduction) {
   process.exit(0);
 }
 
-const required = [
-  "DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "CRA_ADMIN_PIN",
-  "BETTER_AUTH_URL",
-];
-
+const required = ["DATABASE_URL", "CRA_ADMIN_PIN"];
 const missing = required.filter((key) => !process.env[key]?.trim());
-
-// CRA's public ordering flow does not require Grok OAuth. The admin area
-// remains protected by its server-side session/PIN checks, so Grok credentials
-// are intentionally not required for the production build.
 
 if (missing.length) {
   console.error("[preflight] Deployment configuration is incomplete.");
