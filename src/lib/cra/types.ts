@@ -83,6 +83,7 @@ export type Catalog = {
   categories: Category[];
   products: Product[];
   ingredients: Ingredient[];
+  combos: Combo[];
   settings: KitchenSettings;
 };
 
