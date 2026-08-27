@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { CartItem } from "./types";
 
 type CartState = {
@@ -53,7 +53,10 @@ export const useCart = create<CartState>()(
         set({ items: get().items.filter((i) => i.lineId !== lineId) }),
       clear: () => set({ items: [] }),
     }),
-    { name: "cra-cart" },
+    {
+      name: "cra-cart",
+      storage: createJSONStorage(() => sessionStorage),
+    },
   ),
 );
 
