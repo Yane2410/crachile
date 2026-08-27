@@ -80,7 +80,7 @@ function validateCombo(catalog: Catalog, comboId: number, selections: ComboSelec
   let perCombo = subtotal, discount = 0;
   if (combo.benefitType === "fixed") discount = Math.min(subtotal, Math.max(0, combo.benefitValue));
   else if (combo.benefitType === "percent") discount = Math.min(subtotal, Math.round(subtotal * Math.max(0, combo.benefitValue) / 100));
-  else perCombo = Math.max(0, Math.min(subtotal, combo.benefitValue));
+  else perCombo = Math.max(0, combo.benefitValue);
   if (combo.benefitType !== "price") perCombo = subtotal - discount;
   const lineTotal = perCombo * qty;
   return { ok: true, lines: [], total: lineTotal, count: qty, line: { productId: items[0]?.productId ?? 1, name: combo.name, categoryLabel: "Combo", extraIds: [], extras: [], qty, note: "", unitPrice: perCombo, lineTotal, imageUrl: combo.imageUrl, comboId: combo.id, comboName: combo.name, comboItems: items, comboDiscount: discount * qty } };
