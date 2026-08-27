@@ -2,8 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { useState } from "react";
 import { Toaster } from "sonner";
-import { AuthProvider } from "@/lib/auth/provider";
-import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "CRA — Comer Rezar Amar";
@@ -41,13 +39,10 @@ function Root() {
         <HeadContent />
       </head>
       <body className="antialiased">
-        <PreviewHostBridge />
-        <AuthProvider>
-          <QueryClientProvider client={client}>
-            <Outlet />
-            <Toaster position="top-center" richColors />
-          </QueryClientProvider>
-        </AuthProvider>
+        <QueryClientProvider client={client}>
+          <Outlet />
+          <Toaster position="top-center" richColors />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
