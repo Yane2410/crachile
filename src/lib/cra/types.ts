@@ -2,6 +2,7 @@ export type CategoryId = "combos" | "empanadas" | "fajitas" | "papas" | "bebidas
 export type CustomKind = "empanada" | "fajita";
 export type IngredientKind = "protein" | "cheese" | "veg";
 export type PaymentMethod = "efectivo" | "transferencia";
+export type ComboBenefitType = "fixed" | "percent" | "price";
 
 export type Category = {
   id: CategoryId;
@@ -35,6 +36,25 @@ export type Ingredient = {
   fajitaPrice: number;
   available: boolean;
   sortOrder: number;
+};
+
+export type ComboRule = {
+  id: number;
+  categoryId: CategoryId;
+  quantity: number;
+  sortOrder: number;
+};
+
+export type Combo = {
+  id: number;
+  name: string;
+  description: string;
+  imageUrl: string;
+  benefitType: ComboBenefitType;
+  benefitValue: number;
+  available: boolean;
+  sortOrder: number;
+  rules: ComboRule[];
 };
 
 export type KitchenSettings = {
