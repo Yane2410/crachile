@@ -1,9 +1,10 @@
+export type CategoryId = "combos" | "empanadas" | "fajitas" | "papas" | "bebidas";
 export type CustomKind = "empanada" | "fajita";
 export type IngredientKind = "protein" | "cheese" | "veg";
 export type PaymentMethod = "efectivo" | "transferencia";
 
 export type Category = {
-  id: string;
+  id: CategoryId;
   name: string;
   tagline: string;
   sortOrder: number;
@@ -12,7 +13,7 @@ export type Category = {
 
 export type Product = {
   id: number;
-  categoryId: string;
+  categoryId: CategoryId;
   subcategory: string | null;
   name: string;
   description: string;
