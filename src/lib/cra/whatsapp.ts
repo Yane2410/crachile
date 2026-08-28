@@ -40,7 +40,16 @@ export function buildWhatsappMessage(lines: ValidatedLine[], info: CustomerInfo,
     const lineTotal = line.lineTotal;
     total += lineTotal;
     parts.push(`${index + 1}. ${sanitizeLine(title, 120)}`);
-    if (line.extras.length) {
+    if (line.comboItems?.length) {
+      parts.push(...line.comboItems.map((item) => {
+        const itemTitle = [item.categoryLabel, item.name].filter(Boolean).join(" · ");
+        const itemExtras = item.extras.length ? ` · ${item.extras.map((e) => sanitizeLine(e, 40)).join(", ")}` : "";
+        return `   • ${sanitizeLine(itemTitle, 120)}${itemExtras}`;
+      }));
+      if (line.comboDiscount && line.comboDiscount > 0) {
+        parts.push(`   Descuento combo: −${formatClp(line.comboDiscount)}`);
+      }
+    } else if (line.extras.length) {
       parts.push(`   Ingredientes: ${line.extras.map((e) => sanitizeLine(e, 40)).join(", ")}`);
     }
     if (line.note) parts.push(`   Nota: ${sanitizeLine(line.note, 140)}`);
