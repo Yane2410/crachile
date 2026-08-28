@@ -48,8 +48,7 @@ export async function rateLimit(name: string, max: number, windowMs: number): Pr
       from cra_rate_events
       where bucket = ${bucket} and created_at > ${cutoff}::timestamptz
     `;
-    if ((rows[0]?.n ?? 0) > max) return false;
-    return true;
+    return (rows[0]?.n ?? 0) <= max;
   } catch (error) {
     console.error("[cra] rate-limit db fallback", error instanceof Error ? error.message : "error");
     return memoryRateLimit(name, max, windowMs);
