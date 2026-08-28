@@ -1,0 +1,18 @@
+{
+  "name": "CRA — Comer Rezar Amar",
+  "short_name": "CRA",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F5E6D3",
+  "theme_color": "#F5E6D3",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
