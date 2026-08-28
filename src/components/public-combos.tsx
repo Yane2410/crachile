@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Gift, Tag, UtensilsCrossed, X } from "lucide-react";
-import { getCatalog } from "@/lib/cra/fns";
 import { formatClp } from "@/lib/cra/sanitize";
 import { useCart } from "@/lib/cra/cart-store";
-import type { Combo, Product } from "@/lib/cra/types";
+import type { Catalog, Combo, Product } from "@/lib/cra/types";
 
 function benefitLabel(combo: Combo) {
   if (combo.benefitType === "percent") return `${combo.benefitValue}% de descuento`;
@@ -52,10 +50,9 @@ function ComboBuilder({ combo, products, onClose }: { combo: Combo; products: Pr
   return <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl"><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-kicker text-heart">Arma tu combo</p><h2 className="mt-1 font-display text-2xl font-semibold text-title">{combo.name}</h2><p className="mt-1 text-sm text-muted">Elige exactamente lo que quieres dentro del combo.</p></div><button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-full p-2 hover:bg-surface-2"><X className="size-5" /></button></div><div className="space-y-5">{slots.map((slot, index) => { const options = products.filter(p => p.categoryId === slot.categoryId && p.available && !p.isCustom); return <div key={slot.key}><label className="mb-2 block text-sm font-semibold text-title">{index + 1}. {slot.categoryId === "empanadas" ? "Empanada" : slot.categoryId === "fajitas" ? "Fajita" : slot.categoryId === "papas" ? "Papas fritas" : "Bebida"}</label><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{options.map(product => <button key={product.id} type="button" onClick={() => choose(slot.key, product.id)} className={`rounded-xl border p-3 text-left transition ${selected[slot.key] === product.id ? "border-heart bg-heart/10 ring-2 ring-heart/20" : "border-border hover:border-heart/50"}`}><span className="block text-sm font-semibold text-title">{product.name}</span><span className="mt-1 block text-xs text-muted">{formatClp(product.price)}</span></button>)}</div></div>; })}</div><div className="mt-5 rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted">Subtotal</span><strong className="text-sm text-title">{formatClp(pricing.subtotal)}</strong></div><div className="mt-1 flex items-center justify-between"><span className="text-sm text-muted">Beneficio combo</span><strong className="text-sm text-heart">−{formatClp(pricing.discount)}</strong></div><div className="mt-2 flex items-center justify-between border-t border-border pt-2"><span className="text-sm font-semibold text-title">Total del combo</span><strong className="text-xl text-title">{formatClp(pricing.total)}</strong></div>{complete ? <p className="mt-1 text-xs text-muted">El beneficio se volverá a validar al agregar el pedido.</p> : <p className="mt-1 text-xs text-muted">Completa todas las selecciones para continuar.</p>}</div><button type="button" disabled={!complete} onClick={submit} className="mt-4 w-full rounded-2xl bg-heart px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Agregar combo al carrito</button></div></div>;
 }
 
-export function PublicCombos() {
-  const { data: catalog } = useQuery({ queryKey: ["public-catalog"], queryFn: () => getCatalog() });
-  const combos = (catalog?.combos ?? []).filter(combo => combo.available);
-  const products = catalog?.products ?? [];
+export function PublicCombos({ catalog }: { catalog: Catalog }) {
+  const combos = (catalog.combos ?? []).filter(combo => combo.available);
+  const products = catalog.products ?? [];
   const [building, setBuilding] = useState<Combo | null>(null);
   if (!combos.length) return null;
   const carousel = combos.length > 1;
