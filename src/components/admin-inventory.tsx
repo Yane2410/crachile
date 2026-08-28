@@ -1,0 +1,46 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { FieldLabel, TextField } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/cra/cn";
+import { formatClp } from "@/lib/cra/sanitize";
+import { adminCreateInventoryItem, adminDeleteInventoryItem, adminDeleteRecipeLine, adminGetInventory, adminPatchInventoryItem, adminSetRecipeLine } from "@/lib/cra/inventory-fns";
+import type { Catalog, InventoryUnit } from "@/lib/cra/types";
+
+const UNITS: Array<{ id: InventoryUnit; label: string }> = [
+  { id: "g", label: "gramos" }, { id: "kg", label: "kilos" }, { id: "ml", label: "mililitros" }, { id: "l", label: "litros" }, { id: "unit", label: "unidades" },
+];
+
+function status(quantity: number, threshold: number) {
+  if (quantity <= 0) return { label: "Agotado", className: "bg-heart/10 text-heart" };
+  if (threshold > 0 && quantity <= threshold) return { label: "Bajo", className: "bg-primary/15 text-heart" };
+  return { label: "Disponible", className: "bg-surface-2 text-fg" };
+}
+
+export function InventoryTab({ catalog }: { catalog: Catalog }) {
+  const queryClient = useQueryClient();
+  const inventory = useQuery({ queryKey: ["admin-inventory"], queryFn: () => adminGetInventory() }).data;
+  const items = inventory?.items ?? [];
+  const recipes = inventory?.recipes ?? [];
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(""); const [unit, setUnit] = useState<InventoryUnit>("g"); const [quantity, setQuantity] = useState("0"); const [threshold, setThreshold] = useState("0");
+  const [recipeProduct, setRecipeProduct] = useState(""); const [recipeItem, setRecipeItem] = useState(""); const [recipeQty, setRecipeQty] = useState("");
+  const refresh = (next: unknown) => queryClient.setQueryData(["admin-inventory"], next);
+  const create = useMutation({ mutationFn: () => adminCreateInventoryItem({ data: { name, unit, quantity: Number(quantity) || 0, lowThreshold: Number(threshold) || 0 } }), onSuccess: (next) => { refresh(next); setName(""); setQuantity("0"); setThreshold("0"); setOpen(false); toast.success("Insumo creado"); }, onError: (e: Error) => toast.error(e.message) });
+  const patch = useMutation({ mutationFn: (data: Record<string, unknown>) => adminPatchInventoryItem({ data }), onSuccess: (next) => { refresh(next); toast.success("Inventario actualizado"); }, onError: (e: Error) => toast.error(e.message) });
+  const remove = useMutation({ mutationFn: (id: number) => adminDeleteInventoryItem({ data: { id } }), onSuccess: (next) => { refresh(next); toast.success("Insumo eliminado"); }, onError: (e: Error) => toast.error(e.message) });
+  const setRecipe = useMutation({ mutationFn: () => adminSetRecipeLine({ data: { productId: Number(recipeProduct), inventoryItemId: Number(recipeItem), quantity: Number(recipeQty) } }), onSuccess: (next) => { refresh(next); setRecipeQty(""); toast.success("Consumo guardado"); }, onError: (e: Error) => toast.error(e.message) });
+  const removeRecipe = useMutation({ mutationFn: (id: number) => adminDeleteRecipeLine({ data: { id } }), onSuccess: (next) => { refresh(next); toast.success("Consumo quitado"); }, onError: (e: Error) => toast.error(e.message) });
+  const recipeByProduct = useMemo(() => recipes.reduce<Record<number, typeof recipes>>((acc, r) => { (acc[r.productId] ??= []).push(r); return acc; }, {}), [recipes]);
+
+  return <div className="space-y-6">
+    <section className="space-y-3"><div className="flex items-center justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Inventario</h2><p className="text-sm text-muted">Controla insumos reales y define cuánto consume cada producto.</p></div><Button onClick={() => setOpen((v) => !v)}><Plus className="size-4" />Nuevo insumo</Button></div>
+      {open ? <form className="grid gap-3 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-border)] sm:grid-cols-4" onSubmit={(e) => { e.preventDefault(); create.mutate(); }}><div className="space-y-1 sm:col-span-2"><FieldLabel>Insumo</FieldLabel><TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Mechada" required /></div><div className="space-y-1"><FieldLabel>Unidad</FieldLabel><select className="h-11 w-full rounded-[var(--radius-md)] bg-bg px-3 text-sm shadow-[var(--shadow-border)]" value={unit} onChange={(e) => setUnit(e.target.value as InventoryUnit)}>{UNITS.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select></div><div className="space-y-1"><FieldLabel>Stock inicial</FieldLabel><TextField inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^0-9.]/g, ""))} /></div><div className="space-y-1"><FieldLabel>Alerta bajo</FieldLabel><TextField inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value.replace(/[^0-9.]/g, ""))} /></div><div className="flex gap-2 sm:col-span-4"><Button type="submit" disabled={create.isPending}>Guardar insumo</Button><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button></div></form> : null}
+      {items.length === 0 ? <div className="rounded-[var(--radius-lg)] bg-surface p-6 text-center shadow-[var(--shadow-border)]"><p className="font-semibold">Aún no hay insumos</p><p className="mt-1 text-sm text-muted">Empieza con tus proteínas, quesos, salsas y otros ingredientes reales.</p></div> : items.map((item) => { const s = status(item.quantity, item.lowThreshold); return <article key={item.id} className="rounded-[var(--radius-lg)] bg-surface p-3 shadow-[var(--shadow-border)]"><div className="flex flex-wrap items-center gap-3"><div className="min-w-48 flex-1"><div className="flex items-center gap-2"><h3 className="font-semibold">{item.name}</h3><span className={cn("rounded-full px-2 py-1 text-[10px] font-bold uppercase", s.className)}>{s.label}</span></div><p className="mt-1 text-xs text-muted">{item.quantity} {item.unit} disponibles · alerta en {item.lowThreshold} {item.unit}</p></div><div className="flex items-center gap-2"><FieldLabel className="sr-only">Cantidad</FieldLabel><TextField className="w-28" inputMode="decimal" value={String(item.quantity)} onChange={(e) => patch.mutate({ id: item.id, quantity: Number(e.target.value) || 0 })} aria-label={`Cantidad de ${item.name}`} /><span className="text-sm font-semibold">{item.unit}</span><Switch checked={item.available} onCheckedChange={(v) => patch.mutate({ id: item.id, available: v })} aria-label={`Disponibilidad de ${item.name}`} /><Button variant="ghost" size="icon" className="text-heart" aria-label={`Eliminar ${item.name}`} onClick={() => { if (window.confirm(`¿Eliminar ${item.name} del inventario?`)) remove.mutate(item.id); }}><Trash2 className="size-4" /></Button></div></div></article>; })}
+    </section>
+    <section className="space-y-3 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-border)]"><div><h2 className="font-display text-2xl font-semibold">Consumo por producto</h2><p className="text-sm text-muted">Ejemplo: una empanada de mechada puede consumir 40 g de mechada. Después podremos descontarlo al confirmar pedidos.</p></div><div className="grid gap-2 sm:grid-cols-[1fr_1fr_120px_auto]"><select className="h-11 rounded-[var(--radius-md)] bg-bg px-3 text-sm shadow-[var(--shadow-border)]" value={recipeProduct} onChange={(e) => setRecipeProduct(e.target.value)}><option value="">Producto</option>{catalog.products.filter((p) => !p.isCustom).map((p) => <option key={p.id} value={p.id}>{p.name} · {formatClp(p.price)}</option>)}</select><select className="h-11 rounded-[var(--radius-md)] bg-bg px-3 text-sm shadow-[var(--shadow-border)]" value={recipeItem} onChange={(e) => setRecipeItem(e.target.value)}><option value="">Insumo</option>{items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select><TextField inputMode="decimal" value={recipeQty} onChange={(e) => setRecipeQty(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="Cantidad" /><Button disabled={!recipeProduct || !recipeItem || !recipeQty || setRecipe.isPending} onClick={() => setRecipe.mutate()}>Agregar</Button></div>{recipeProduct && (recipeByProduct[Number(recipeProduct)] ?? []).length ? <div className="space-y-1">{(recipeByProduct[Number(recipeProduct)] ?? []).map((r) => { const item = items.find((i) => i.id === r.inventoryItemId); return <div key={r.id} className="flex items-center justify-between rounded-[var(--radius-md)] bg-surface-2 px-3 py-2 text-sm"><span>{item?.name ?? "Insumo eliminado"}</span><span className="flex items-center gap-2 font-semibold">{r.quantity} {item?.unit ?? ""}<button type="button" className="text-heart" aria-label="Quitar consumo" onClick={() => removeRecipe.mutate(r.id)}><Trash2 className="size-4" /></button></span></div>; })}</div> : null}</section>
+  </div>;
+}
