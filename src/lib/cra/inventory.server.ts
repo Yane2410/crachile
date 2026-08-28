@@ -3,62 +3,13 @@ import { sanitizeLine } from "./sanitize";
 import type { InventoryItem, InventorySnapshot, InventoryUnit } from "./types";
 
 const UNITS: InventoryUnit[] = ["g", "kg", "ml", "l", "unit"];
-
 type ItemRow = { id: number; name: string; unit: InventoryUnit; quantity: number | string; low_threshold: number | string; available: boolean };
 type RecipeRow = { id: number; product_id: number; inventory_item_id: number; quantity: number | string };
-
 const num = (v: unknown) => Number.isFinite(Number(v)) ? Number(v) : 0;
-const mapItem = (r: ItemRow): InventoryItem => ({ id: num(r.id), name: r.name, unit: r.unit, quantity: num(r.quantity), lowThreshold: num(r.low_threshold), available: r.available === true || r.available === "true" as never });
-
-export async function loadInventory(): Promise<InventorySnapshot> {
-  const sql = await getSql();
-  const items = await sql<ItemRow>`select id, name, unit, quantity, low_threshold, available from cra_inventory_items order by lower(name), id`;
-  const recipes = await sql<RecipeRow>`select id, product_id, inventory_item_id, quantity from cra_recipe_lines order by product_id, id`;
-  return { items: items.map(mapItem), recipes: recipes.map((r) => ({ id: num(r.id), productId: num(r.product_id), inventoryItemId: num(r.inventory_item_id), quantity: num(r.quantity) })) };
-}
-
-export async function createInventoryItem(input: { name: string; unit: InventoryUnit; quantity: number; lowThreshold: number }) {
-  if (!UNITS.includes(input.unit)) throw new Error("Unidad de inventario inválida.");
-  const name = sanitizeLine(input.name, 120).trim();
-  if (!name) throw new Error("El nombre del insumo es obligatorio.");
-  const quantity = Math.max(0, num(input.quantity));
-  const lowThreshold = Math.max(0, num(input.lowThreshold));
-  const sql = await getSql();
-  await sql`insert into cra_inventory_items (name, unit, quantity, low_threshold) values (${name}, ${input.unit}, ${quantity}, ${lowThreshold})`;
-  return loadInventory();
-}
-
-export async function patchInventoryItem(id: number, patch: Partial<{ name: string; unit: InventoryUnit; quantity: number; lowThreshold: number; available: boolean }>) {
-  if (!Number.isInteger(id) || id < 1) throw new Error("Ese insumo no existe.");
-  if (patch.unit !== undefined && !UNITS.includes(patch.unit)) throw new Error("Unidad de inventario inválida.");
-  const name = patch.name === undefined ? undefined : sanitizeLine(patch.name, 120).trim();
-  if (name !== undefined && !name) throw new Error("El nombre del insumo es obligatorio.");
-  const quantity = patch.quantity === undefined ? undefined : Math.max(0, num(patch.quantity));
-  const lowThreshold = patch.lowThreshold === undefined ? undefined : Math.max(0, num(patch.lowThreshold));
-  const sql = await getSql();
-  await sql`update cra_inventory_items set name=coalesce(${name ?? null},name), unit=coalesce(${patch.unit ?? null},unit), quantity=coalesce(${quantity ?? null},quantity), low_threshold=coalesce(${lowThreshold ?? null},low_threshold), available=coalesce(${patch.available ?? null},available), updated_at=now() where id=${id}`;
-  return loadInventory();
-}
-
-export async function deleteInventoryItem(id: number) {
-  if (!Number.isInteger(id) || id < 1) throw new Error("Ese insumo no existe.");
-  const sql = await getSql();
-  await sql`delete from cra_inventory_items where id=${id}`;
-  return loadInventory();
-}
-
-export async function setRecipeLine(productId: number, inventoryItemId: number, quantity: number) {
-  if (!Number.isInteger(productId) || productId < 1 || !Number.isInteger(inventoryItemId) || inventoryItemId < 1) throw new Error("Producto o insumo inválido.");
-  const qty = num(quantity);
-  if (qty <= 0) throw new Error("El consumo debe ser mayor que cero.");
-  const sql = await getSql();
-  await sql`insert into cra_recipe_lines (product_id, inventory_item_id, quantity) values (${productId}, ${inventoryItemId}, ${qty}) on conflict (product_id, inventory_item_id) do update set quantity=excluded.quantity`;
-  return loadInventory();
-}
-
-export async function deleteRecipeLine(id: number) {
-  if (!Number.isInteger(id) || id < 1) throw new Error("Esa receta no existe.");
-  const sql = await getSql();
-  await sql`delete from cra_recipe_lines where id=${id}`;
-  return loadInventory();
-}
+const mapItem = (r: ItemRow): InventoryItem => ({ id: num(r.id), name: r.name, unit: r.unit, quantity: num(r.quantity), lowThreshold: num(r.low_threshold), available: r.available === true });
+export async function loadInventory(): Promise<InventorySnapshot> { const sql = await getSql(); const items = await sql<ItemRow>`select id, name, unit, quantity, low_threshold, available from cra_inventory_items order by lower(name), id`; const recipes = await sql<RecipeRow>`select id, product_id, inventory_item_id, quantity from cra_recipe_lines order by product_id, id`; return { items: items.map(mapItem), recipes: recipes.map((r) => ({ id: num(r.id), productId: num(r.product_id), inventoryItemId: num(r.inventory_item_id), quantity: num(r.quantity) })) }; }
+export async function createInventoryItem(input: { name: string; unit: InventoryUnit; quantity: number; lowThreshold: number }) { if (!UNITS.includes(input.unit)) throw new Error("Unidad de inventario inválida."); const name = sanitizeLine(input.name, 120).trim(); if (!name) throw new Error("El nombre del insumo es obligatorio."); const quantity = Math.max(0, num(input.quantity)); const lowThreshold = Math.max(0, num(input.lowThreshold)); const sql = await getSql(); await sql`insert into cra_inventory_items (name, unit, quantity, low_threshold) values (${name}, ${input.unit}, ${quantity}, ${lowThreshold})`; return loadInventory(); }
+export async function patchInventoryItem(id: number, patch: Partial<{ name: string; unit: InventoryUnit; quantity: number; lowThreshold: number; available: boolean }>) { if (!Number.isInteger(id) || id < 1) throw new Error("Ese insumo no existe."); if (patch.unit !== undefined && !UNITS.includes(patch.unit)) throw new Error("Unidad de inventario inválida."); const name = patch.name === undefined ? undefined : sanitizeLine(patch.name, 120).trim(); if (name !== undefined && !name) throw new Error("El nombre del insumo es obligatorio."); const quantity = patch.quantity === undefined ? undefined : Math.max(0, num(patch.quantity)); const lowThreshold = patch.lowThreshold === undefined ? undefined : Math.max(0, num(patch.lowThreshold)); const sql = await getSql(); await sql`update cra_inventory_items set name=coalesce(${name ?? null},name), unit=coalesce(${patch.unit ?? null},unit), quantity=coalesce(${quantity ?? null},quantity), low_threshold=coalesce(${lowThreshold ?? null},low_threshold), available=coalesce(${patch.available ?? null},available), updated_at=now() where id=${id}`; return loadInventory(); }
+export async function deleteInventoryItem(id: number) { if (!Number.isInteger(id) || id < 1) throw new Error("Ese insumo no existe."); const sql = await getSql(); await sql`delete from cra_inventory_items where id=${id}`; return loadInventory(); }
+export async function setRecipeLine(productId: number, inventoryItemId: number, quantity: number) { if (!Number.isInteger(productId) || productId < 1 || !Number.isInteger(inventoryItemId) || inventoryItemId < 1) throw new Error("Producto o insumo inválido."); const qty = num(quantity); if (qty <= 0) throw new Error("El consumo debe ser mayor que cero."); const sql = await getSql(); await sql`insert into cra_recipe_lines (product_id, inventory_item_id, quantity) values (${productId}, ${inventoryItemId}, ${qty}) on conflict (product_id, inventory_item_id) do update set quantity=excluded.quantity`; return loadInventory(); }
+export async function deleteRecipeLine(id: number) { if (!Number.isInteger(id) || id < 1) throw new Error("Esa receta no existe."); const sql = await getSql(); await sql`delete from cra_recipe_lines where id=${id}`; return loadInventory(); }
