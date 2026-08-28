@@ -19,6 +19,7 @@ export interface Sql {
     text: string,
     params?: unknown[],
   ): Promise<T[]>;
+  transaction<T>(work: (tx: Sql) => Promise<T>): Promise<T>;
 }
 
 const globalRef = globalThis as typeof globalThis & {
@@ -46,6 +47,7 @@ function toSql(run: Run): Sql {
     text: string,
     params: unknown[] = [],
   ) => run<T>(text, params);
+  sql.transaction = async <T>(work: (tx: Sql) => Promise<T>) => work(sql);
   return sql;
 }
 
@@ -67,10 +69,33 @@ function createNeonSql(): Promise<Sql> {
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
     });
-    return toSql(async <T>(text: string, params: unknown[]) => {
+    const sql = toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
     });
+    sql.transaction = async <T>(work: (tx: Sql) => Promise<T>) => {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const tx = toSql(async <R>(text: string, params: unknown[]) => {
+          const res = await client.query(text, params);
+          return res.rows as R[];
+        });
+        const result = await work(tx);
+        await client.query("COMMIT");
+        return result;
+      } catch (error) {
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          // Preserve the original error.
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
+    };
+    return sql;
   })().catch((err) => {
     globalRef.__pgSqlPromise__ = undefined;
     throw err;
