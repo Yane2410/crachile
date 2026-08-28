@@ -27,9 +27,11 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 export const getAdminCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  await requireKitchen();
-  const { loadCatalog } = await import("./catalog.server");
-  return loadCatalog();
+  const { loadCatalog, loadMeta, publicCatalog } = await import("./catalog.server");
+  const { readSession } = await import("./session.server");
+  const catalog = await loadCatalog();
+  const meta = await loadMeta();
+  return readSession(meta.sessionSecret) ? catalog : publicCatalog(catalog);
 });
 
 export const createOrder = createServerFn({ method: "POST" }).validator((input: unknown) => input).handler(async ({ data }) => {
