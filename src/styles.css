@@ -66,7 +66,6 @@
 .press-add { transition: transform var(--motion-quick) var(--ease-out); }
 .press-add:active:not(:disabled) { transform: scale(var(--motion-press)); }
 
-/* CRA responsive layout: use the actual menu structure instead of brittle width assumptions. */
 .min-h-dvh > header > div,
 .min-h-dvh > nav > div,
 .min-h-dvh > main,
@@ -76,94 +75,39 @@
   margin-right: auto;
 }
 
-/* The source component uses max-w-5xl. On desktop that was too narrow for a real restaurant menu. */
 @media (min-width: 1024px) {
-  .min-h-dvh .max-w-5xl {
-    max-width: 80rem;
-  }
-
+  .min-h-dvh .max-w-5xl { max-width: 80rem; }
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div,
   .min-h-dvh > main,
-  .min-h-dvh > footer {
-    max-width: 1280px;
-  }
-
-  .min-h-dvh > main {
-    padding-left: 32px;
-    padding-right: 32px;
-    padding-top: 40px;
-  }
-
+  .min-h-dvh > footer { max-width: 1280px; }
+  .min-h-dvh > main { padding-left: 32px; padding-right: 32px; padding-top: 40px; }
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div,
-  .min-h-dvh > footer {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-
-  /* Four comfortable product columns on large screens; three on normal desktops. */
-  .min-h-dvh > main section .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 24px;
-  }
-
-  .min-h-dvh > main section .grid > button {
-    min-width: 0;
-    width: 100%;
-  }
-
-  /* Desktop cards should read like proper menu tiles, not oversized mobile rows. */
-  .min-h-dvh > main section .grid > button > div:first-child {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-  }
-
-  .min-h-dvh > main section .grid > button > div:last-child {
-    min-height: 148px;
-    padding: 18px;
-  }
-
-  .min-h-dvh > main section .grid > button h3 {
-    font-size: 1.08rem;
-  }
-
-  .min-h-dvh > main section .grid > button p {
-    font-size: .875rem;
-    line-height: 1.45;
-  }
+  .min-h-dvh > footer { padding-left: 32px; padding-right: 32px; }
+  .min-h-dvh > main section .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .min-h-dvh > main section .grid > button { min-width: 0; width: 100%; }
+  .min-h-dvh > main section .grid > button > div:first-child { width: 100%; aspect-ratio: 4 / 3; }
+  .min-h-dvh > main section .grid > button > div:last-child { min-height: 148px; padding: 18px; }
+  .min-h-dvh > main section .grid > button h3 { font-size: 1.08rem; }
+  .min-h-dvh > main section .grid > button p { font-size: .875rem; line-height: 1.45; }
 }
 
 @media (min-width: 1280px) {
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div,
   .min-h-dvh > main,
-  .min-h-dvh > footer {
-    max-width: 1400px;
-  }
-
-  .min-h-dvh .max-w-5xl {
-    max-width: 80rem;
-  }
-
-  .min-h-dvh > main {
-    padding-left: 40px;
-    padding-right: 40px;
-  }
-
-  .min-h-dvh > main section .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 26px;
-  }
+  .min-h-dvh > footer { max-width: 1400px; }
+  .min-h-dvh .max-w-5xl { max-width: 80rem; }
+  .min-h-dvh > main { padding-left: 40px; padding-right: 40px; }
+  .min-h-dvh > main section .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px; }
 }
 
 @media (min-width: 1536px) {
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div,
   .min-h-dvh > main,
-  .min-h-dvh > footer {
-    max-width: 1480px;
-  }
+  .min-h-dvh > footer { max-width: 1480px; }
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {
@@ -171,11 +115,7 @@
   .min-h-dvh > header > div,
   .min-h-dvh > nav > div { padding-left: 20px; padding-right: 20px; }
   .min-h-dvh > footer { padding-left: 20px; padding-right: 20px; }
-
-  .min-h-dvh > main section .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-  }
+  .min-h-dvh > main section .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 }
 
 @media (max-width: 639px) {
@@ -183,33 +123,89 @@
   .min-h-dvh > header > div { padding-left: 16px; padding-right: 16px; }
   .min-h-dvh > nav > div { padding-left: 16px; padding-right: 16px; }
   .min-h-dvh > footer { padding-left: 16px; padding-right: 16px; }
+
+  /* CRA compact mobile menu: product cards become short horizontal rows.
+     The product image stays on the right; the purchase information stays on the left. */
+  .min-h-dvh main article {
+    min-height: 122px;
+    max-height: 154px;
+    flex-direction: row-reverse;
+    border-radius: var(--radius-md);
+  }
+
+  .min-h-dvh main article > button:first-child {
+    flex: 0 0 38%;
+    width: 38%;
+    min-width: 112px;
+    max-width: 150px;
+    aspect-ratio: 1 / 1;
+    align-self: stretch;
+  }
+
+  .min-h-dvh main article > div:last-child {
+    min-width: 0;
+    padding: 10px 11px;
+    overflow: hidden;
+  }
+
+  .min-h-dvh main article h3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: .98rem;
+    line-height: 1.15;
+  }
+
+  .min-h-dvh main article p {
+    font-size: .74rem;
+    line-height: 1.25;
+  }
+
+  .min-h-dvh main article > div:last-child > div:last-child {
+    margin-top: auto;
+    gap: 6px;
+  }
+
+  .min-h-dvh main article > div:last-child > div:last-child > span {
+    font-size: .88rem;
+    white-space: nowrap;
+  }
+
+  .min-h-dvh main article .press-add {
+    height: 34px;
+    padding-left: 11px;
+    padding-right: 11px;
+    font-size: .76rem;
+  }
+
+  .min-h-dvh main article .absolute.left-2\.5 {
+    left: 6px;
+    top: 6px;
+  }
+
+  /* Keep the horizontal Favorites carousel compact without making it a second huge menu. */
+  .min-h-dvh main section .w-featured {
+    width: min(82vw, 330px);
+  }
+
+  /* Render lower menu sections only as they approach the viewport. */
+  .min-h-dvh main > section {
+    content-visibility: auto;
+    contain-intrinsic-size: 700px;
+  }
 }
 
-/* Prevent long names/descriptions from forcing desktop cards wider than their grid. */
 .min-h-dvh main h1,
 .min-h-dvh main h2,
 .min-h-dvh main h3,
-.min-h-dvh main p {
-  overflow-wrap: anywhere;
-}
-
-/* Keep product media stable at every viewport. */
-.min-h-dvh main img {
-  max-width: 100%;
-}
+.min-h-dvh main p { overflow-wrap: anywhere; }
+.min-h-dvh main img { max-width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade,
-  .badge-pop { animation: none; }
+  .animate-fade, .badge-pop { animation: none; }
   .press-add { transition: none; }
 }
 
-@keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-@keyframes badge-pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.18); }
-  100% { transform: scale(1); }
-}
+@keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes badge-pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
