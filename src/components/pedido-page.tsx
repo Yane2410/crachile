@@ -58,6 +58,8 @@ export function PedidoPage({ catalog }: { catalog: Catalog }) {
         toast.success("Pedido copiado. Pégalo en WhatsApp.");
       } else {
         window.open(whatsappUrl(result.whatsapp, result.message), "_blank", "noopener,noreferrer");
+        // El pedido ya fue entregado a WhatsApp: no debe reaparecer al volver a CRA.
+        clear();
       }
       setDone(true);
     } catch {
@@ -85,25 +87,10 @@ export function PedidoPage({ catalog }: { catalog: Catalog }) {
         <BrandLockup />
         <h1 className="mt-10 font-display text-3xl font-semibold">Pedido listo</h1>
         <p className="mt-3 text-muted">
-          WhatsApp se abre con el pedido completo: tus datos, cada plato, extras, notas y el total. Revisa y envíalo a la cocina.
+          Tu pedido quedó preparado y WhatsApp se abrió con el mensaje completo. Revisa y presiona “Enviar” en WhatsApp para mandarlo a la cocina.
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          <Button variant="whatsapp" onClick={() => void submit("wa")}>
-            <MessageCircle className="size-4" />
-            Abrir de nuevo
-          </Button>
-          <Button variant="secondary" onClick={() => void submit("copy")}>
-            <Copy className="size-4" />
-            Copiar mensaje
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              clear();
-              setDone(false);
-            }}
-            asChild
-          >
+          <Button variant="ghost" asChild>
             <Link to="/">Hacer otro pedido</Link>
           </Button>
         </div>
