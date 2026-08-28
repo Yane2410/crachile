@@ -1,4 +1,4 @@
-export type CategoryId = "combos" | "empanadas" | "fajitas" | "papas" | "bebidas";
+export type CategoryId = "combos" | "empanadas" | "fajitas" | "papas" | "bebidas" | "extras";
 export type CustomKind = "empanada" | "fajita";
 export type IngredientKind = "protein" | "cheese" | "veg";
 export type PaymentMethod = "efectivo" | "transferencia";
