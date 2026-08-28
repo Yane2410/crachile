@@ -6,7 +6,7 @@ export type ComboBenefitType = "fixed" | "percent" | "price";
 export type InventoryUnit = "g" | "kg" | "ml" | "l" | "unit";
 
 export type Category = { id: CategoryId; name: string; tagline: string; sortOrder: number; available: boolean };
-export type Product = { id: number; categoryId: CategoryId; subcategory: string | null; name: string; description: string; price: number; imageUrl: string; available: boolean; isCustom: boolean; customKind: CustomKind | null; sortOrder: number };
+export type Product = { id: number; categoryId: CategoryId; subcategory: string | null; name: string; description: string; price: number; imageUrl: string; available: boolean; isCustom: boolean; customKind: CustomKind | null; sortOrder: number; isFavorite: boolean };
 export type Ingredient = { id: string; name: string; kind: IngredientKind; premium: boolean; empanadaOk: boolean; fajitaOk: boolean; fajitaPrice: number; available: boolean; sortOrder: number };
 export type ComboRule = { id: number; categoryId: CategoryId; quantity: number; sortOrder: number };
 export type Combo = { id: number; name: string; description: string; imageUrl: string; benefitType: ComboBenefitType; benefitValue: number; available: boolean; sortOrder: number; rules: ComboRule[] };
