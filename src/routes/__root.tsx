@@ -5,6 +5,9 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "CRA — Comer Rezar Amar";
+const SITE_URL = "https://crachile.vercel.app";
+const SHARE_IMAGE = `${SITE_URL}/og.jpg`;
+const DESCRIPTION = "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp.";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,20 +15,25 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      { name: "description", content: "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp." },
+      { name: "description", content: DESCRIPTION },
       { name: "theme-color", content: "#F5E6D3" },
       { property: "og:title", content: APP_NAME },
-      { property: "og:description", content: "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp." },
+      { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/og.jpg" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:site_name", content: "Comer Rezar Amar" },
+      { property: "og:image", content: SHARE_IMAGE },
+      { property: "og:image:secure_url", content: SHARE_IMAGE },
+      { property: "og:image:type", content: "image/jpeg" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: APP_NAME },
-      { name: "twitter:description", content: "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp." },
-      { name: "twitter:image", content: "/og.jpg" },
+      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: SHARE_IMAGE },
     ],
     links: [
+      { rel: "canonical", href: SITE_URL },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
