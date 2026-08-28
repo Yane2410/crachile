@@ -13,10 +13,6 @@ function safeMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function publicCatalog(catalog: Catalog): Catalog {
-  return { ...catalog, settings: { ...catalog.settings, pinHint: false } };
-}
-
 async function requireKitchen() {
   const { loadMeta } = await import("./catalog.server");
   const { readSession } = await import("./session.server");
@@ -26,8 +22,14 @@ async function requireKitchen() {
 }
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadCatalog } = await import("./catalog.server");
+  const { loadCatalog, publicCatalog } = await import("./catalog.server");
   return publicCatalog(await loadCatalog());
+});
+
+export const getAdminCatalog = createServerFn({ method: "GET" }).handler(async () => {
+  await requireKitchen();
+  const { loadCatalog } = await import("./catalog.server");
+  return loadCatalog();
 });
 
 export const createOrder = createServerFn({ method: "POST" }).validator((input: unknown) => input).handler(async ({ data }) => {
@@ -82,7 +84,7 @@ export const adminPatchProduct = createServerFn({ method: "POST" }).validator(as
     if (!data || typeof data !== "object") throw new ClientError("Datos inválidos.");
     const row = data as Record<string, unknown>; const id = Number(row.id);
     if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe.");
-    return publicCatalog(await patchProduct(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, price: typeof row.price === "number" ? row.price : undefined, available: typeof row.available === "boolean" ? row.available : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined }));
+    return patchProduct(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, price: typeof row.price === "number" ? row.price : undefined, available: typeof row.available === "boolean" ? row.available : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined });
   } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
 });
 
@@ -91,7 +93,7 @@ export const adminCreateProduct = createServerFn({ method: "POST" }).validator(a
     await requireKitchen(); const { createProduct } = await import("./catalog.server");
     if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>;
     if (typeof row.categoryId !== "string" || typeof row.name !== "string") throw new ClientError("Datos inválidos.");
-    return publicCatalog(await createProduct({ categoryId: row.categoryId, name: row.name, price: typeof row.price === "number" ? row.price : 0, description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined }));
+    return createProduct({ categoryId: row.categoryId, name: row.name, price: typeof row.price === "number" ? row.price : 0, description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined });
   } catch (error) { throw new ClientError(safeMessage(error, "No se pudo crear.")); }
 });
 
@@ -100,7 +102,7 @@ export const adminDeleteProduct = createServerFn({ method: "POST" }).validator(a
     await requireKitchen(); const { deleteProduct } = await import("./catalog.server");
     if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const id = Number((data as Record<string, unknown>).id);
     if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe.");
-    return publicCatalog(await deleteProduct(id));
+    return deleteProduct(id);
   } catch (error) { throw new ClientError(safeMessage(error, "No se pudo quitar.")); }
 });
 
@@ -109,7 +111,7 @@ export const adminPatchIngredient = createServerFn({ method: "POST" }).validator
     await requireKitchen(); const { patchIngredient } = await import("./catalog.server");
     if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>;
     if (typeof row.id !== "string") throw new ClientError("Ese ingrediente no existe.");
-    return publicCatalog(await patchIngredient(row.id, { fajitaPrice: typeof row.fajitaPrice === "number" ? row.fajitaPrice : undefined, available: typeof row.available === "boolean" ? row.available : undefined }));
+    return patchIngredient(row.id, { fajitaPrice: typeof row.fajitaPrice === "number" ? row.fajitaPrice : undefined, available: typeof row.available === "boolean" ? row.available : undefined });
   } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
 });
 
@@ -117,7 +119,7 @@ export const adminSaveSettings = createServerFn({ method: "POST" }).validator(as
   try {
     await requireKitchen(); const { saveSettings } = await import("./catalog.server");
     if (!data || typeof data !== "object") throw new ClientError("Datos inválidos.");
-    return publicCatalog(await saveSettings(data as Partial<KitchenSettings>));
+    return saveSettings(data as Partial<KitchenSettings>);
   } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
 });
 
