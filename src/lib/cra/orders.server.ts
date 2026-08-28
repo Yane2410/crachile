@@ -1,5 +1,5 @@
 import { getSql } from "@/lib/db";
-import { consumeInventoryForOrder } from "./inventory.server";
+import { consumeInventoryForOrderTx } from "./inventory.server";
 import { sanitizeLine } from "./sanitize";
 
 export type OrderStatus = "received" | "confirmed" | "preparing" | "ready" | "delivered" | "cancelled";
@@ -14,7 +14,6 @@ export type NewOrder = {
   total: number;
 };
 
-type OrderRow = NewOrder & { id: number; status: OrderStatus; inventoryConsumedAt: string | null; createdAt: string; updatedAt: string };
 const clean = (value: unknown, max: number) => sanitizeLine(String(value ?? ""), max).trim();
 
 export async function createOrder(input: NewOrder) {
@@ -24,9 +23,7 @@ export async function createOrder(input: NewOrder) {
     extras: Array.isArray(item.extras) ? item.extras.map((x) => clean(x, 120)).filter(Boolean).slice(0, 20) : [],
     note: clean(item.note, 500),
   }));
-  if (items.some((item) => !Number.isInteger(item.productId) || item.productId < 1 || !Number.isInteger(item.qty) || item.qty < 1 || item.unitPrice < 0)) {
-    throw new Error("El pedido contiene una línea inválida.");
-  }
+  if (items.some((item) => !Number.isInteger(item.productId) || item.productId < 1 || !Number.isInteger(item.qty) || item.qty < 1 || item.unitPrice < 0)) throw new Error("El pedido contiene una línea inválida.");
   const total = Math.max(0, Math.trunc(Number(input.total)));
   const sql = await getSql();
   const rows = await sql<{ id: number; status: OrderStatus; created_at: string }>`
@@ -37,6 +34,7 @@ export async function createOrder(input: NewOrder) {
   return rows[0];
 }
 
+/** Confirms an unprocessed order and consumes all recipe inventory in the same DB transaction. */
 export async function confirmOrder(id: number) {
   if (!Number.isInteger(id) || id < 1) throw new Error("Pedido inválido.");
   const sql = await getSql();
@@ -49,7 +47,7 @@ export async function confirmOrder(id: number) {
     if (order.status !== "received") throw new Error(`El pedido ya está en estado ${order.status}.`);
     if (order.inventory_consumed_at) throw new Error("El inventario de este pedido ya fue descontado.");
 
-    const result = await consumeInventoryForOrder(order.items.map((item) => ({ productId: item.productId, qty: item.qty })));
+    const result = await consumeInventoryForOrderTx(tx, order.items.map((item) => ({ productId: item.productId, qty: item.qty })));
     if (!result.ok) throw new Error(result.error);
 
     const updated = await tx<{ id: number; status: OrderStatus }>`
