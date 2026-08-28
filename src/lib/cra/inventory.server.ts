@@ -65,67 +65,53 @@ type InventoryOrderLine = { productId: number; qty: number };
 type LockedInventoryRow = { id: number; name: string; unit: InventoryUnit; quantity: number | string; available: boolean };
 type Consumption = { inventoryItemId: number; name: string; unit: InventoryUnit; quantity: number };
 
-/**
- * Atomically consumes the inventory required by an accepted order.
- * The caller must invoke this only after CRA has accepted the order.
- * If any required ingredient is unavailable, the whole transaction rolls back.
- */
-export async function consumeInventoryForOrder(lines: InventoryOrderLine[]): Promise<{ ok: true; consumed: Consumption[] } | { ok: false; error: string }> {
-  if (!Array.isArray(lines) || lines.length === 0) return { ok: false, error: "El pedido no contiene productos." };
+type ConsumeResult = { ok: true; consumed: Consumption[] } | { ok: false; error: string };
 
+function validateOrderLines(lines: InventoryOrderLine[]) {
+  if (!Array.isArray(lines) || lines.length === 0) return { ok: false as const, error: "El pedido no contiene productos." };
   const normalized = new Map<number, number>();
   for (const line of lines) {
-    if (!Number.isInteger(line.productId) || line.productId < 1 || !Number.isInteger(line.qty) || line.qty < 1) {
-      return { ok: false, error: "Una línea del pedido no es válida." };
-    }
+    if (!Number.isInteger(line.productId) || line.productId < 1 || !Number.isInteger(line.qty) || line.qty < 1) return { ok: false as const, error: "Una línea del pedido no es válida." };
     normalized.set(line.productId, (normalized.get(line.productId) ?? 0) + line.qty);
   }
+  return { ok: true as const, normalized };
+}
 
+/** Performs consumption inside an already-open transaction. */
+export async function consumeInventoryForOrderTx(tx: Sql, lines: InventoryOrderLine[]): Promise<ConsumeResult> {
+  const validation = validateOrderLines(lines);
+  if (!validation.ok) return validation;
+  const productIds = [...validation.normalized.keys()];
+  const recipeRows = await tx<RecipeRow>`select id, product_id, inventory_item_id, quantity from cra_recipe_lines where product_id = any(${productIds}) order by inventory_item_id, product_id, id`;
+  const required = new Map<number, number>();
+  for (const recipe of recipeRows) {
+    const productQty = validation.normalized.get(recipe.product_id) ?? 0;
+    required.set(recipe.inventory_item_id, (required.get(recipe.inventory_item_id) ?? 0) + num(recipe.quantity) * productQty);
+  }
+  if (required.size === 0) return { ok: true, consumed: [] };
+  const inventoryIds = [...required.keys()];
+  const rows = await tx<LockedInventoryRow>`select id, name, unit, quantity, available from cra_inventory_items where id = any(${inventoryIds}) order by id for update`;
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const [inventoryItemId, needed] of required) {
+    const row = byId.get(inventoryItemId);
+    if (!row) return { ok: false, error: "Un insumo de la receta ya no existe." };
+    if (!row.available) return { ok: false, error: `El insumo ${row.name} no está disponible.` };
+    if (num(row.quantity) < needed) return { ok: false, error: `Stock insuficiente de ${row.name}. Disponible: ${num(row.quantity)} ${row.unit}; necesario: ${needed} ${row.unit}.` };
+  }
+  const consumed: Consumption[] = [];
+  for (const [inventoryItemId, needed] of required) {
+    const row = byId.get(inventoryItemId)!;
+    await tx`update cra_inventory_items set quantity = quantity - ${needed}, updated_at = now() where id = ${inventoryItemId}`;
+    consumed.push({ inventoryItemId, name: row.name, unit: row.unit, quantity: needed });
+  }
+  return { ok: true, consumed };
+}
+
+/** Safely consumes inventory in its own transaction for callers that already have an accepted order. */
+export async function consumeInventoryForOrder(lines: InventoryOrderLine[]): Promise<ConsumeResult> {
   const sql = await getSql();
   try {
-    return await sql.transaction(async (tx: Sql) => {
-      const productIds = [...normalized.keys()];
-      const recipeRows = await tx<RecipeRow>`
-        select id, product_id, inventory_item_id, quantity
-        from cra_recipe_lines
-        where product_id = any(${productIds})
-        order by inventory_item_id, product_id, id
-      `;
-
-      const required = new Map<number, number>();
-      for (const recipe of recipeRows) {
-        const productQty = normalized.get(recipe.product_id) ?? 0;
-        required.set(recipe.inventory_item_id, (required.get(recipe.inventory_item_id) ?? 0) + num(recipe.quantity) * productQty);
-      }
-
-      if (required.size === 0) return { ok: true as const, consumed: [] };
-
-      const inventoryIds = [...required.keys()];
-      const rows = await tx<LockedInventoryRow>`
-        select id, name, unit, quantity, available
-        from cra_inventory_items
-        where id = any(${inventoryIds})
-        order by id
-        for update
-      `;
-
-      const byId = new Map(rows.map((row) => [row.id, row]));
-      for (const [inventoryItemId, needed] of required) {
-        const row = byId.get(inventoryItemId);
-        if (!row) throw new Error("Un insumo de la receta ya no existe.");
-        if (!row.available) throw new Error(`El insumo ${row.name} no está disponible.`);
-        if (num(row.quantity) < needed) throw new Error(`Stock insuficiente de ${row.name}. Disponible: ${num(row.quantity)} ${row.unit}; necesario: ${needed} ${row.unit}.`);
-      }
-
-      const consumed: Consumption[] = [];
-      for (const [inventoryItemId, needed] of required) {
-        const row = byId.get(inventoryItemId)!;
-        await tx`update cra_inventory_items set quantity = quantity - ${needed}, updated_at = now() where id = ${inventoryItemId}`;
-        consumed.push({ inventoryItemId, name: row.name, unit: row.unit, quantity: needed });
-      }
-
-      return { ok: true as const, consumed };
-    });
+    return await sql.transaction((tx) => consumeInventoryForOrderTx(tx, lines));
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "No se pudo descontar el inventario." };
   }
