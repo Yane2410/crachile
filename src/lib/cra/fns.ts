@@ -3,168 +3,26 @@ import { LIMITS } from "./limits.ts";
 import { jsonSize } from "./sanitize.ts";
 import { parseCustomerInfo, validateOrder } from "./pricing.ts";
 import { buildWhatsappMessage } from "./whatsapp.ts";
-import type { Catalog, KitchenSettings } from "./types.ts";
+import type { Catalog, CategoryId, KitchenSettings } from "./types.ts";
 
 class ClientError extends Error {}
-
-function safeMessage(error: unknown, fallback: string) {
-  if (error instanceof ClientError) return error.message;
-  console.error(error);
-  return fallback;
-}
-
-async function requireKitchen() {
-  const { loadMeta } = await import("./catalog.server");
-  const { readSession } = await import("./session.server");
-  const meta = await loadMeta();
-  if (!readSession(meta.sessionSecret)) throw new ClientError("Sesión expirada.");
-  return meta;
-}
-
-export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadCatalog, publicCatalog } = await import("./catalog.server");
-  return publicCatalog(await loadCatalog());
-});
-
-export const getAdminCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadCatalog, loadMeta, publicCatalog } = await import("./catalog.server");
-  const { readSession } = await import("./session.server");
-  const catalog = await loadCatalog();
-  const meta = await loadMeta();
-  return readSession(meta.sessionSecret) ? catalog : publicCatalog(catalog);
-});
-
-export const createOrder = createServerFn({ method: "POST" }).validator((input: unknown) => input).handler(async ({ data }) => {
-  try {
-    const { rateLimit } = await import("./rate-limit.server");
-    const { loadCatalog } = await import("./catalog.server");
-    if (!(await rateLimit("order", LIMITS.orderPerMinute, 60_000))) return { ok: false as const, error: "Demasiados intentos. Espera un momento." };
-    if (jsonSize(data) > LIMITS.payloadBytes) return { ok: false as const, error: "El pedido es demasiado grande." };
-    if (!data || typeof data !== "object" || Array.isArray(data)) return { ok: false as const, error: "El pedido no es válido." };
-    const payload = data as Record<string, unknown>;
-    const catalog = await loadCatalog();
-    const order = validateOrder(catalog, payload.items);
-    if (!order.ok) return { ok: false as const, error: order.error };
-    const info = parseCustomerInfo(payload.info);
-    if (!info.ok) return { ok: false as const, error: info.error };
-    const message = buildWhatsappMessage(order.lines, info.info, catalog.settings);
-    return { ok: true as const, total: order.total, count: order.count, message, whatsapp: catalog.settings.whatsapp };
-  } catch (error) {
-    return { ok: false as const, error: safeMessage(error, "No se pudo armar el pedido. Inténtalo de nuevo.") };
-  }
-});
-
-export const adminMe = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadMeta } = await import("./catalog.server");
-  const { readSession } = await import("./session.server");
-  const meta = await loadMeta();
-  return { ok: readSession(meta.sessionSecret), pinHint: false };
-});
-
+function safeMessage(error: unknown, fallback: string) { if (error instanceof ClientError) return error.message; console.error(error); return fallback; }
+async function requireKitchen() { const { loadMeta } = await import("./catalog.server"); const { readSession } = await import("./session.server"); const meta = await loadMeta(); if (!readSession(meta.sessionSecret)) throw new ClientError("Sesión expirada."); return meta; }
+export const getCatalog = createServerFn({ method: "GET" }).handler(async () => { const { loadCatalog, publicCatalog } = await import("./catalog.server"); return publicCatalog(await loadCatalog()); });
+export const getAdminCatalog = createServerFn({ method: "GET" }).handler(async () => { const { loadCatalog, loadMeta, publicCatalog } = await import("./catalog.server"); const { readSession } = await import("./session.server"); const catalog = await loadCatalog(); const meta = await loadMeta(); return readSession(meta.sessionSecret) ? catalog : publicCatalog(catalog); });
+export const createOrder = createServerFn({ method: "POST" }).validator((input: unknown) => input).handler(async ({ data }) => { try { const { rateLimit } = await import("./rate-limit.server"); const { loadCatalog } = await import("./catalog.server"); if (!(await rateLimit("order", LIMITS.orderPerMinute, 60_000))) return { ok: false as const, error: "Demasiados intentos. Espera un momento." }; if (jsonSize(data) > LIMITS.payloadBytes) return { ok: false as const, error: "El pedido es demasiado grande." }; if (!data || typeof data !== "object" || Array.isArray(data)) return { ok: false as const, error: "El pedido no es válido." }; const payload = data as Record<string, unknown>; const catalog = await loadCatalog(); const order = validateOrder(catalog, payload.items); if (!order.ok) return { ok: false as const, error: order.error }; const info = parseCustomerInfo(payload.info); if (!info.ok) return { ok: false as const, error: info.error }; const message = buildWhatsappMessage(order.lines, info.info, catalog.settings); return { ok: true as const, total: order.total, count: order.count, message, whatsapp: catalog.settings.whatsapp }; } catch (error) { return { ok: false as const, error: safeMessage(error, "No se pudo armar el pedido. Inténtalo de nuevo.") }; } });
+export const adminMe = createServerFn({ method: "GET" }).handler(async () => { const { loadMeta } = await import("./catalog.server"); const { readSession } = await import("./session.server"); const meta = await loadMeta(); return { ok: readSession(meta.sessionSecret), pinHint: false }; });
 function asData(input: unknown) { return input; }
-
-export const adminLogin = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  const { rateLimit } = await import("./rate-limit.server");
-  const { loadMeta } = await import("./catalog.server");
-  const { issueSession, pinLooksValid, verifyPin } = await import("./session.server");
-  if (!(await rateLimit("admin-login", 5, 10 * 60_000))) throw new ClientError("Demasiados intentos. Espera un momento.");
-  const pin = data && typeof data === "object" && "pin" in data ? (data as { pin: unknown }).pin : "";
-  if (!pinLooksValid(pin)) throw new ClientError("PIN incorrecto.");
-  const meta = await loadMeta();
-  if (!(await verifyPin(pin, meta.pinHash))) throw new ClientError("PIN incorrecto.");
-  issueSession(meta.sessionSecret);
-  return { ok: true as const };
-});
-
-export const adminLogout = createServerFn({ method: "POST" }).handler(async () => {
-  const { clearSession } = await import("./session.server"); clearSession(); return { ok: true as const };
-});
-
-export const adminPatchProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { patchProduct } = await import("./catalog.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos.");
-    const row = data as Record<string, unknown>; const id = Number(row.id);
-    if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe.");
-    return patchProduct(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, price: typeof row.price === "number" ? row.price : undefined, available: typeof row.available === "boolean" ? row.available : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined });
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
-});
-
-export const adminCreateProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { createProduct } = await import("./catalog.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>;
-    if (typeof row.categoryId !== "string" || typeof row.name !== "string") throw new ClientError("Datos inválidos.");
-    return createProduct({ categoryId: row.categoryId, name: row.name, price: typeof row.price === "number" ? row.price : 0, description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined });
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo crear.")); }
-});
-
-export const adminDeleteProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { deleteProduct } = await import("./catalog.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const id = Number((data as Record<string, unknown>).id);
-    if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe.");
-    return deleteProduct(id);
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo quitar.")); }
-});
-
-export const adminPatchIngredient = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { patchIngredient } = await import("./catalog.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>;
-    if (typeof row.id !== "string") throw new ClientError("Ese ingrediente no existe.");
-    return patchIngredient(row.id, { fajitaPrice: typeof row.fajitaPrice === "number" ? row.fajitaPrice : undefined, available: typeof row.available === "boolean" ? row.available : undefined });
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
-});
-
-export const adminSaveSettings = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { saveSettings } = await import("./catalog.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos.");
-    return saveSettings(data as Partial<KitchenSettings>);
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); }
-});
-
-export const adminChangePin = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos.");
-    const row = data as { current?: unknown; next?: unknown };
-    const { pinLooksValid, verifyPin, hashPin, issueSession } = await import("./session.server"); const { updatePinHash } = await import("./catalog.server");
-    if (!pinLooksValid(row.current) || !pinLooksValid(row.next)) throw new ClientError("PIN inválido.");
-    const meta = await requireKitchen(); if (!(await verifyPin(row.current, meta.pinHash))) throw new ClientError("PIN actual incorrecto.");
-    await updatePinHash(await hashPin(row.next)); issueSession(meta.sessionSecret); return { ok: true as const };
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo actualizar el PIN.")); }
-});
-
-export const getCombos = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadCombos } = await import("./combos.server");
-  return loadCombos().then((items) => items.filter((c) => c.available));
-});
-
-export const adminGetCombos = createServerFn({ method: "GET" }).handler(async () => {
-  await requireKitchen(); const { loadCombos } = await import("./combos.server"); return loadCombos();
-});
-
-export const adminCreateCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { createCombo } = await import("./combos.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>;
-    return createCombo({ name: String(row.name ?? ""), description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : "", benefitType: row.benefitType as "fixed" | "percent" | "price", benefitValue: Number(row.benefitValue ?? 0), available: Boolean(row.available), rules: row.rules });
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo crear el combo.")); }
-});
-
-export const adminUpdateCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { updateCombo } = await import("./combos.server");
-    if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; const id = Number(row.id);
-    if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese combo no existe.");
-    return updateCombo(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined, benefitType: row.benefitType as "fixed" | "percent" | "price" | undefined, benefitValue: row.benefitValue === undefined ? undefined : Number(row.benefitValue), available: typeof row.available === "boolean" ? row.available : undefined, rules: row.rules });
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar el combo.")); }
-});
-
-export const adminDeleteCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => {
-  try {
-    await requireKitchen(); const { deleteCombo } = await import("./combos.server"); const id = data && typeof data === "object" ? Number((data as Record<string, unknown>).id) : 0;
-    if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese combo no existe."); return deleteCombo(id);
-  } catch (error) { throw new ClientError(safeMessage(error, "No se pudo eliminar el combo.")); }
-});
+export const adminLogin = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { const { rateLimit } = await import("./rate-limit.server"); const { loadMeta } = await import("./catalog.server"); const { issueSession, pinLooksValid, verifyPin } = await import("./session.server"); if (!(await rateLimit("admin-login", 5, 10 * 60_000))) throw new ClientError("Demasiados intentos. Espera un momento."); const pin = data && typeof data === "object" && "pin" in data ? (data as { pin: unknown }).pin : ""; if (!pinLooksValid(pin)) throw new ClientError("PIN incorrecto."); const meta = await loadMeta(); if (!(await verifyPin(pin, meta.pinHash))) throw new ClientError("PIN incorrecto."); issueSession(meta.sessionSecret); return { ok: true as const }; });
+export const adminLogout = createServerFn({ method: "POST" }).handler(async () => { const { clearSession } = await import("./session.server"); clearSession(); return { ok: true as const }; });
+export const adminPatchProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { patchProduct } = await import("./catalog.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; const id = Number(row.id); if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe."); const categoryId = row.categoryId === undefined ? undefined : row.categoryId as CategoryId; const sortOrder = row.sortOrder === undefined ? undefined : Number(row.sortOrder); if (categoryId && !["combos","empanadas","fajitas","papas","bebidas","extras"].includes(categoryId)) throw new ClientError("Categoría inválida."); if (sortOrder !== undefined && (!Number.isFinite(sortOrder) || sortOrder < 0)) throw new ClientError("Orden inválido."); return patchProduct(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, price: typeof row.price === "number" ? row.price : undefined, available: typeof row.available === "boolean" ? row.available : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined, categoryId, sortOrder }); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); } });
+export const adminCreateProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { createProduct } = await import("./catalog.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; if (typeof row.categoryId !== "string" || typeof row.name !== "string") throw new ClientError("Datos inválidos."); if (!row.categoryId || row.categoryId === "combos") throw new ClientError("Ese tipo de producto se crea desde su sección correspondiente."); const price = Number(row.price); if (!Number.isFinite(price) || price <= 0) throw new ClientError("El precio debe ser mayor que cero."); return createProduct({ categoryId: row.categoryId, name: row.name, price, description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined }); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo crear.")); } });
+export const adminDeleteProduct = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { deleteProduct } = await import("./catalog.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const id = Number((data as Record<string, unknown>).id); if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese plato no existe."); return deleteProduct(id); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo quitar.")); } });
+export const adminPatchIngredient = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { patchIngredient } = await import("./catalog.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; if (typeof row.id !== "string") throw new ClientError("Ese ingrediente no existe."); return patchIngredient(row.id, { fajitaPrice: typeof row.fajitaPrice === "number" ? row.fajitaPrice : undefined, available: typeof row.available === "boolean" ? row.available : undefined }); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); } });
+export const adminSaveSettings = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { saveSettings } = await import("./catalog.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); return saveSettings(data as Partial<KitchenSettings>); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar.")); } });
+export const adminChangePin = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as { current?: unknown; next?: unknown }; const { pinLooksValid, verifyPin, hashPin, issueSession } = await import("./session.server"); const { updatePinHash } = await import("./catalog.server"); if (!pinLooksValid(row.current) || !pinLooksValid(row.next)) throw new ClientError("PIN inválido."); const meta = await requireKitchen(); if (!(await verifyPin(row.current, meta.pinHash))) throw new ClientError("PIN actual incorrecto."); await updatePinHash(await hashPin(row.next)); issueSession(meta.sessionSecret); return { ok: true as const }; } catch (error) { throw new ClientError(safeMessage(error, "No se pudo actualizar el PIN.")); } });
+export const getCombos = createServerFn({ method: "GET" }).handler(async () => { const { loadCombos } = await import("./combos.server"); return loadCombos().then((items) => items.filter((c) => c.available)); });
+export const adminGetCombos = createServerFn({ method: "GET" }).handler(async () => { await requireKitchen(); const { loadCombos } = await import("./combos.server"); return loadCombos(); });
+export const adminCreateCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { createCombo } = await import("./combos.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; return createCombo({ name: String(row.name ?? ""), description: typeof row.description === "string" ? row.description : "", imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : "", benefitType: row.benefitType as "fixed" | "percent" | "price", benefitValue: Number(row.benefitValue ?? 0), available: Boolean(row.available), rules: row.rules }); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo crear el combo.")); } });
+export const adminUpdateCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { updateCombo } = await import("./combos.server"); if (!data || typeof data !== "object") throw new ClientError("Datos inválidos."); const row = data as Record<string, unknown>; const id = Number(row.id); if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese combo no existe."); return updateCombo(id, { name: typeof row.name === "string" ? row.name : undefined, description: typeof row.description === "string" ? row.description : undefined, imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined, benefitType: row.benefitType as "fixed" | "percent" | "price" | undefined, benefitValue: row.benefitValue === undefined ? undefined : Number(row.benefitValue), available: typeof row.available === "boolean" ? row.available : undefined, rules: row.rules }); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo guardar el combo.")); } });
+export const adminDeleteCombo = createServerFn({ method: "POST" }).validator(asData).handler(async ({ data }) => { try { await requireKitchen(); const { deleteCombo } = await import("./combos.server"); const id = data && typeof data === "object" ? Number((data as Record<string, unknown>).id) : 0; if (!Number.isInteger(id) || id < 1) throw new ClientError("Ese combo no existe."); return deleteCombo(id); } catch (error) { throw new ClientError(safeMessage(error, "No se pudo eliminar el combo.")); } });
