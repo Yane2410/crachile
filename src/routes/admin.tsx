@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminPage } from "@/components/admin-page";
-import { getCatalog } from "@/lib/cra/fns";
+import { getAdminCatalog } from "@/lib/cra/fns";
 
 export const Route = createFileRoute("/admin")({
-  loader: () => getCatalog(),
+  loader: () => getAdminCatalog(),
   component: Admin,
 });
 
