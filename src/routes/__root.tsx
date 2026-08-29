@@ -6,7 +6,7 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "CRA — Comer Rezar Amar";
 const SITE_URL = "https://crachile.vercel.app";
-const SHARE_IMAGE = `${SITE_URL}/menu/hero.jpg`;
+const SHARE_IMAGE = `${SITE_URL}/og.jpg`;
 const DESCRIPTION = "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp.";
 
 export const Route = createRootRoute({
@@ -25,8 +25,8 @@ export const Route = createRootRoute({
       { property: "og:image", content: SHARE_IMAGE },
       { property: "og:image:secure_url", content: SHARE_IMAGE },
       { property: "og:image:type", content: "image/jpeg" },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
+      { property: "og:image:width", content: "400" },
+      { property: "og:image:height", content: "210" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: APP_NAME },
       { name: "twitter:description", content: DESCRIPTION },
