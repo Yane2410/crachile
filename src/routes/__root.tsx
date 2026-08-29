@@ -6,7 +6,7 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "CRA — Comer Rezar Amar";
 const SITE_URL = "https://crachile.vercel.app";
-const SHARE_IMAGE = `${SITE_URL}/og.jpg`;
+const SHARE_IMAGE = `${SITE_URL}/menu/hero.jpg`;
 const DESCRIPTION = "Menú digital de Comer Rezar Amar. Empanadas venezolanas, fajitas y papas en Talca. Pide por WhatsApp.";
 
 export const Route = createRootRoute({
